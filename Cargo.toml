@@ -1,0 +1,8 @@
+[package]
+name = "metrics-controller"
+version = "0.1.0"
+authors = ["thills <thills@mozilla.com", "russn <russn@mozilla.com"]
+
+
+[dependencies]
+hyper = "~0.7"
