@@ -3,3 +3,4 @@
 
 pub mod controller;
 pub use controller::MetricsController;
+pub mod gzip;

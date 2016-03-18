@@ -5,5 +5,6 @@ authors = ["thills <thills@mozilla.com", "russn <russn@mozilla.com"]
 
 
 [dependencies]
+flate2 = "0.2.13"
 hyper = "~0.7"
 uuid = "0.1.18"
