@@ -7,11 +7,15 @@ extern crate serde_json;
 extern crate hyper;
 extern crate uuid;
 extern crate time;
+extern crate retry;
 
 use self::serde_json::Value;
 use self::uuid::Uuid;
-
+use self::hyper::status::StatusCode;
 use gzip::Gzip;
+
+const CRASH_PING_RETRIES: u32 = 10;
+const CRASH_PING_WAIT: u32 = 500;
 
 // /submit/telemetry/docId/docType/appName/appVersion/appUpdateChannel/appBuildID
 
@@ -127,13 +131,26 @@ impl MetricsController {
 
         let gz_body = Gzip::new(cp_body_str).encode();
 
-        //TODO:  Figure out why this ref/de-ref works
-        let res = client.post(&*full_url)
-            .body(gz_body.as_slice())
-            .send()
-            .unwrap();
-        assert_eq!(res.status, hyper::Ok);
-        print!("{}", res.status);
+        // This function retries sending the crash ping a given number of times
+        // and waits a given number of msecs in between retries.
+        match retry::retry(CRASH_PING_RETRIES, CRASH_PING_WAIT,
+            || client.post(&*full_url).body(gz_body.as_slice()).send(),
+            // This next line evaluates to true if the request was successful
+            // and false if it failed and we need to retry.  Think of this
+            // as the condition to keep retrying or stop.
+            |res| match *res {
+                Ok(ref res)=> {if res.status == StatusCode::Ok {true} else {
+                    println!("Retry failed");
+                    false}},
+                Err(ref error) => { println!("Error:{}", error); false},
+            }) {
+            // This below is the final disposition of retrying n times.
+            Ok(_) => println!("Crash Ping Sent Successfully"),
+            Err(error) => {
+                println!("Found an error: {} ", error);
+                return false;
+            }
+        }
         true
     }
 
@@ -185,5 +202,30 @@ fn test_send_crash_ping_metrics_disabled() {
     let serialized = serde_json::to_string(&meta_data).unwrap();
     let bret = controller.send_crash_ping(serialized);
     // Crash ping should not be sent if the metrics are disabled.
+    assert_eq!(bret, false);
+}
+
+#[test]
+fn test_send_crash_ping_http_error() {
+    let mut controller = MetricsController::new(true,
+        "foxbox".to_string(),
+        "1.0".to_string(),
+        "default".to_string(),
+        "20160305".to_string(),
+        "en-us".to_string(),
+        "linux".to_string(),
+        "1.2.3.".to_string(),
+        "raspberry-pi".to_string(),
+        "arm".to_string(),
+        "rust".to_string());
+    let meta_data = CrashDummy {
+        crash_reason: "bad code".to_string(),
+    };
+
+    // This URL is configured to return a 301 error.
+    controller.telemetry_server_url = "http://www.mocky.io/v2/56f2b8e60f0000f305b16a5c/submit/telemetry/".to_string();
+
+    let serialized = serde_json::to_string(&meta_data).unwrap();
+    let bret = controller.send_crash_ping(serialized);
     assert_eq!(bret, false);
 }
