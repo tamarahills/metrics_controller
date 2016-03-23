@@ -23,38 +23,55 @@ use self::flate2::Compression::Default;
 //  'use std::io::Write'"
 
 use std::io::Write;
+use std::string::String;
 
 #[test]
 fn test_encode() {
-  let mut input = Vec::new();
-  input.extend_from_slice(&[49,49,49,49,49,50,50,50,50,50,51,51,51,51,51,52,52,52,52,52]);
-  let mut expected = Vec::new();
-  expected.extend_from_slice(&[31,139,8,0,0,0,0,0,0,7,51,52,4,2,35,16,48,6,1,19,16,0,0,103,130,220,216,20,0,0,0]);
+  let input = "11111222223333344444";
+  let mut v_expected = Vec::new();
+  v_expected.extend_from_slice(&[31,139,8,0,0,0,0,0,0,7,51,52,4,2,35,16,48,6,1,19,16,0,0,103,130,220,216,20,0,0,0]);
 
-  let compressed = encode(input);
+  let compressed = Gzip::new(input).encode();
 
-  assert_eq!(compressed, expected);
+  assert_eq!(compressed, v_expected);
 }
+
  
-pub fn encode(input: Vec<u8>) -> Vec<u8> {
-
-  // 'write_stream' is an EncoderWriter<W> where 'W' is
-  // the Write trait. The first argument to 'GzEncoder::new' is bound to
-  // 'W', that is, it is bound to the Write trait. This is fine because
-  // std::Vec implementes the Write trait.
-  let mut write_stream = GzEncoder::new(Vec::new(), Default);
-
-  // TODO: How can 'write_all', which is a Write method, implemented by
-  // std::Vec, be invoked on 'write_stream', which is of type EncoderWriter<Write>?
-  // EncoderWriter does not implement 'write_all'. EncoderWriter has an 'inner'
-  // object that is a std::Vec but 'inner' is not exposed. I don't get it.
-  write_stream.write_all(&input).unwrap();
-
-  let bytes = match write_stream.finish() {
-    Ok(response) => response,
-    Err(_) => panic!("Error with 'finish'")
-  };
-
-  bytes 
+#[allow(dead_code)]
+pub struct Gzip {
+  input: String
 }
 
+impl Gzip {
+  #[allow(dead_code)]
+  pub fn new(input: &str) -> Gzip {
+    let string_input = String::from(input);
+
+    Gzip {
+      input: string_input
+    }
+  }
+
+  #[allow(dead_code)]
+  pub fn encode(&self) -> Vec<u8> {
+
+    // 'write_stream' is an EncoderWriter<W> where 'W' is
+    // the Write trait. The first argument to 'GzEncoder::new' is bound to
+    // 'W', that is, it is bound to the Write trait. This is fine because
+    // std::Vec implementes the Write trait.
+    let mut write_stream = GzEncoder::new(Vec::new(), Default);
+
+    // TODO: How can 'write_all', which is a Write method, implemented by
+    // std::Vec, be invoked on 'write_stream', which is of type EncoderWriter<Write>?
+    // EncoderWriter does not implement 'write_all'. EncoderWriter has an 'inner'
+    // object that is a std::Vec but 'inner' is not exposed. I don't get it.
+    write_stream.write_all(self.input.as_bytes()).unwrap();
+
+    let bytes = match write_stream.finish() {
+      Ok(response) => response,
+      Err(_) => panic!("Error with 'finish'")
+    };
+
+    bytes
+  }
+}
