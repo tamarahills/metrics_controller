@@ -10,6 +10,9 @@ extern crate time;
 
 use self::serde_json::Value;
 use self::uuid::Uuid;
+
+use gzip::Gzip;
+
 // /submit/telemetry/docId/docType/appName/appVersion/appUpdateChannel/appBuildID
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -102,7 +105,7 @@ impl MetricsController {
 
         let mdata: Value = serde_json::from_str(&meta_data.to_string()).unwrap();
 
-        let body = CrashPingBody {
+        let cp_body = CrashPingBody {
             v: "1".to_string(),
             creationDate: tz.to_string(),
             locale: self.locale,
@@ -117,14 +120,16 @@ impl MetricsController {
                 metadata: mdata,
             }),
         };
-        let serialized = serde_json::to_string(&body).unwrap();
+        let serialized = serde_json::to_string(&cp_body).unwrap();
         // The body needs to be converted to a static str and you can't get
         // a static str from a String, thus you need to slice.
-        let body_slice: &str = &serialized[..];
+        let cp_body_str: &str = &serialized[..];
+
+        let gz_body = Gzip::new(cp_body_str).encode();
 
         //TODO:  Figure out why this ref/de-ref works
         let res = client.post(&*full_url)
-            .body(body_slice)
+            .body(gz_body.as_slice())
             .send()
             .unwrap();
         assert_eq!(res.status, hyper::Ok);
