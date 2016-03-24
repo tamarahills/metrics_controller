@@ -16,6 +16,8 @@ use gzip::Gzip;
 
 const CRASH_PING_RETRIES: u32 = 10;
 const CRASH_PING_WAIT: u32 = 500;
+const CRASH_PING_TYPE: &'static str = "/cd-crash/";
+const TELEMETRY_SERVER_URL: &'static str = "https://incoming.telemetry.mozilla.org/submit/telemetry/";
 
 // /submit/telemetry/docId/docType/appName/appVersion/appUpdateChannel/appBuildID
 
@@ -68,7 +70,7 @@ impl MetricsController {
                platform: String) -> MetricsController {
         MetricsController {
             is_active: is_active,
-            telemetry_server_url : "https://incoming.telemetry.mozilla.org/submit/telemetry/".to_string(),
+            telemetry_server_url: TELEMETRY_SERVER_URL.to_string(),
             doc_id: Uuid::new_v4().to_simple_string(),
             app_name: app_name,
             app_version: app_version,
@@ -89,17 +91,7 @@ impl MetricsController {
             return false;   //you need the return here as Rust is expression oriented
         }
 
-        //TODO:  Put this URL building in a separate fn.
-        let mut full_url:String = self.telemetry_server_url;
-        full_url.push_str(&self.doc_id);
-        full_url.push_str(&"/cd-crash/".to_string());
-        full_url.push_str(&self.app_name);
-        full_url.push_str(&"/".to_string());
-        full_url.push_str(&self.app_version);
-        full_url.push_str(&"/".to_string());
-        full_url.push_str(&self.app_update_channel);
-        full_url.push_str(&"/".to_string());
-        full_url.push_str(&self.app_build_id);
+        let full_url = self.build_url(CRASH_PING_TYPE);
 
         print!("full url: {}", full_url);
         let client = hyper::Client::new();
@@ -155,8 +147,24 @@ impl MetricsController {
     }
 
     pub fn test_method(&self) {
-        print!("URL: {}", self.telemetry_server_url);
-        print!("uuid: {}", self.doc_id);
+        print!("Called test_method");
+    }
+
+    // This helper function can be used to build the submission URL for
+    // any of the telemetry server URLs.  The ping_type is one of:
+    // CD_CRASH_TYPE or CD_METRICS_TYPE.
+    fn build_url(&self, ping_type: &str) -> String {
+        let mut full_url:String = self.telemetry_server_url.to_string();
+        full_url.push_str(&self.doc_id);
+        full_url.push_str(ping_type);
+        full_url.push_str(&self.app_name);
+        full_url.push_str(&"/".to_string());
+        full_url.push_str(&self.app_version);
+        full_url.push_str(&"/".to_string());
+        full_url.push_str(&self.app_update_channel);
+        full_url.push_str(&"/".to_string());
+        full_url.push_str(&self.app_build_id);
+        full_url
     }
 }
 
@@ -228,4 +236,18 @@ fn test_send_crash_ping_http_error() {
     let serialized = serde_json::to_string(&meta_data).unwrap();
     let bret = controller.send_crash_ping(serialized);
     assert_eq!(bret, false);
+}
+
+#[test]
+fn test_build_url() {
+    let mut controller = MetricsController::new(true,
+        "foxbox".to_string(), "1.0".to_string(), "default".to_string(),
+        "20160305".to_string(), "en-us".to_string(),"linux".to_string(),
+        "1.2.3.".to_string(), "raspberry-pi".to_string(),"arm".to_string(),
+        "rust".to_string());
+    // Set the controller id as this is generated randomly.
+    controller.doc_id = "1234".to_string();
+    let full_url: String = controller.build_url(CRASH_PING_TYPE);
+    assert_eq!(full_url,
+        "https://incoming.telemetry.mozilla.org/submit/telemetry/1234/cd-crash/foxbox/1.0/default/20160305")
 }
