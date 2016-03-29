@@ -54,6 +54,5 @@ fn main() {
     let serialized = serde_json::to_string(&meta_data).unwrap();
     println!("{}", serialized);
 
-    controller.test_method();
     controller.send_crash_ping(serialized);
 }
