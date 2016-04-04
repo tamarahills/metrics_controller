@@ -13,6 +13,7 @@ use self::serde_json::Value;
 use self::uuid::Uuid;
 use self::hyper::status::StatusCode;
 use gzip::Gzip;
+use sysinfo::*;
 
 // hyper Error uses this trait, necessary when using Error methods,
 // e.g., 'description'
@@ -105,8 +106,9 @@ impl MetricsController {
 
     pub fn new(is_active: bool, app_name: String, app_version: String,
                app_update_channel: String, app_build_id: String, locale: String,
-               os: String, osversion: String, device: String, arch: String,
+               device: String, arch: String,
                platform: String) -> MetricsController {
+                   let mut helper = SysInfoHelper;
         MetricsController {
             is_active: is_active,
             telemetry_server_url: TELEMETRY_SERVER_URL.to_string(),
@@ -116,8 +118,8 @@ impl MetricsController {
             app_update_channel: app_update_channel,
             app_build_id: app_build_id,
             locale: locale,
-            os: os,
-            osversion: osversion,
+            os: get_os(&mut helper),
+            osversion: get_os_version(&mut helper),
             device: device,
             arch: arch,
             platform: platform
@@ -168,6 +170,26 @@ impl MetricsController {
         full_url
     }
 
+#[cfg(not(test))]
+    fn get_os(&self) -> String {
+        self.os.clone()
+    }
+
+#[cfg(test)]
+    fn get_os(&self) -> String {
+        "linux".to_string()
+    }
+
+#[cfg(not(test))]
+    fn get_os_version(&self) -> String {
+        self.osversion.clone()
+    }
+
+#[cfg(test)]
+    fn get_os_version(&self) -> String {
+        "1.2.3.".to_string()
+    }
+
     fn get_crash_ping_body(&self, meta_data: String) -> Vec<u8> {
 
         let rfc3339_string = self.get_rfc3339_string();
@@ -179,8 +201,8 @@ impl MetricsController {
             v: "1".to_string(),
             creationDate: rfc3339_string,
             locale: self.locale.clone(),
-            os: self.os.clone(),
-            osversion: self.osversion.clone(),
+            os: self.get_os(),
+            osversion: self.get_os_version(),
             device: self.device.clone(),
             arch: self.arch.clone(),
             platform: self.platform.clone(),
@@ -193,7 +215,6 @@ impl MetricsController {
         let serialized = serde_json::to_string(&cp_body).unwrap();
 
         println!("Crash ping body: {}", serialized);
-
         // The body needs to be converted to a static str and you can't get
         // a static str from a String, thus you need to slice.
         let cp_body_str: &str = &serialized[..];
@@ -279,11 +300,11 @@ impl CanRetry for MockSendWithRetry {
                 println!("In MockSendWithRetry::send, attempts: {}", self.attempts);
                 if self.succeed_on_attempt == self.attempts {
                     self.succeeded_on_attempt = self.attempts;
-                    println!("In MockSendWithRetry::send, returning Ok (200)"); 
+                    println!("In MockSendWithRetry::send, returning Ok (200)");
                     return Ok(StatusCode::Ok);
                 } else {
                     // No success yet, return a failure return code
-                    println!("In MockSendWithRetry::send, returning Ok (Unauthorized)"); 
+                    println!("In MockSendWithRetry::send, returning Ok (Unauthorized)");
                     return Ok(StatusCode::Unauthorized);
                 }
             },
@@ -308,8 +329,6 @@ fn create_metrics_controller(is_active: bool) -> MetricsController {
         "default".to_string(),
         "20160305".to_string(),
         "en-us".to_string(),
-        "linux".to_string(),
-        "1.2.3.".to_string(),
         "raspberry-pi".to_string(),
         "arm".to_string(),
         "rust".to_string())
@@ -444,4 +463,3 @@ fn test_send_crash_ping_http_error() {
     let bret = controller.send_crash_ping(serialized);
     assert_eq!(bret, false);
 }
-
