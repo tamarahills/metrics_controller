@@ -57,14 +57,6 @@ impl OSInfo for MockSysInfoHelper {
     }
 }
 
-#[cfg(test)]
-impl MockSysInfoHelper {
-    fn getResult(&mut self) -> bool { self.success }
-    fn setResult(&mut self, success: bool) {
-        self.success = success
-    }
-}
-
 #[test]
 #[cfg(target_os = "macos")]
 fn test_get_os_success() {

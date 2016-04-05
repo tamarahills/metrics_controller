@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![allow(dead_code)]
 // TODO:  eventually remove this if we think it's ok to send snake case to
 // the telemetry server.  Rust does not allow this as an inner attribute lower
 // in the code for now, so we have to have it at the module level to avoid the
