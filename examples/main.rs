@@ -1,11 +1,16 @@
 #![feature(custom_derive, plugin)]
 #![plugin(serde_macros)]
 
+extern crate chrono;
+extern crate metrics_controller;
+
 extern crate serde;
 extern crate serde_json;
+extern crate timer;
 
-extern crate metrics_controller;
 use metrics_controller::MetricsController;
+use std::thread;
+
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -25,7 +30,7 @@ pub struct CrashPingMetaData {
 
 
 fn main() {
-    let controller = MetricsController::new(true,
+    let mut controller = MetricsController::new(true,
         "foxbox".to_string(),
         "1.0".to_string(),
         "default".to_string(),
@@ -53,4 +58,8 @@ fn main() {
     println!("{}", serialized);
 
     controller.send_crash_ping(serialized);
+
+    controller.start_metrics();
+
+    thread::sleep(std::time::Duration::from_secs(75));
 }
