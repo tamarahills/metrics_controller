@@ -7,7 +7,6 @@ extern crate serde_json;
 extern crate metrics_controller;
 use metrics_controller::MetricsController;
 
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CrashPingMetaData {
     //TODO: snake case is not ideal here.  I need to find out how to
@@ -50,7 +49,6 @@ fn main() {
         total_virtual_memory: 2147352576
     };
     let serialized = serde_json::to_string(&meta_data).unwrap();
-    println!("{}", serialized);
 
     controller.send_crash_ping(serialized);
 }
