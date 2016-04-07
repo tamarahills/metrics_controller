@@ -6,9 +6,16 @@
 #![cfg_attr(test, plugin(stainless))]
 extern crate serde;
 
+#[macro_use]
+extern crate log;
+
+#[macro_use]
+extern crate lazy_static;
+
 pub mod controller;
 pub use controller::MetricsController;
 pub mod gzip;
 pub mod sysinfo;
 pub mod metrics_worker;
 pub mod config;
+pub mod logger;

@@ -1,5 +1,9 @@
 extern crate flate2;
 
+use log::LogLevelFilter;
+use logger::MetricsLoggerFactory;
+use logger::MetricsLogger;
+
 //
 // Need 'self' here because an 'extern crate' statement loads
 // the variable into the current namespace while a 'use' statement
@@ -24,6 +28,10 @@ use self::flate2::Compression::Default;
 
 use std::io::Write;
 use std::string::String;
+
+#[allow(non_upper_case_globals)]
+// Shortcut to MetricsLoggerFactory function that gets the logger instance.
+const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
 
 #[test]
 fn test_encode() {
@@ -66,8 +74,10 @@ impl Gzip {
 
     let bytes = match write_stream.finish() {
       Ok(response) => response,
-      Err(_) => panic!("Error with 'finish'")
+      Err(_) => panic!("encode error with 'finish'")
     };
+
+    logger().log(LogLevelFilter::Debug, "gzipped the payload successfully");
 
     bytes
   }

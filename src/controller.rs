@@ -3,18 +3,21 @@
 // the telemetry server.  Rust does not allow this as an inner attribute lower
 // in the code for now, so we have to have it at the module level to avoid the
 // warning for now.
-extern crate serde_json;
 extern crate hyper;
-extern crate uuid;
-extern crate time;
 extern crate retry;
+extern crate serde_json;
+extern crate time;
+extern crate uuid;
 
 use metrics_worker::MetricsWorker;
-use self::serde_json::Value;
-use self::uuid::Uuid;
-use self::hyper::status::StatusCode;
 use gzip::Gzip;
+use self::hyper::status::StatusCode;
+use log::LogLevelFilter;
+use logger::MetricsLoggerFactory;
+use logger::MetricsLogger;
+use self::serde_json::Value;
 use sysinfo::*;
+use self::uuid::Uuid;
 
 // hyper Error uses this trait, necessary when using Error methods,
 // e.g., 'description'
@@ -25,7 +28,9 @@ const CRASH_PING_WAIT: u32 = 500;
 const CRASH_PING_TYPE: &'static str = "/cd-crash/";
 const TELEMETRY_SERVER_URL: &'static str = "https://incoming.telemetry.mozilla.org/submit/telemetry/";
 
-// /submit/telemetry/docId/docType/appName/appVersion/appUpdateChannel/appBuildID
+#[allow(non_upper_case_globals)]
+// Shortcut to MetricsLoggerFactory function that gets the logger instance.
+const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CrashPingPayload {
@@ -45,11 +50,6 @@ pub struct CrashPingBody {
     arch: String,
     platform: String,
     payload: Option<CrashPingPayload>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CrashDummy {
-    crash_reason: String,
 }
 
 // This trait is used to abstract sending data to the server.
@@ -109,7 +109,6 @@ impl MetricsController {
                app_update_channel: String, app_build_id: String, locale: String,
                device: String, arch: String,
                platform: String) -> MetricsController {
-
         let mut helper = SysInfoHelper;
         MetricsController {
             is_active: is_active,
@@ -148,6 +147,7 @@ impl MetricsController {
     pub fn send_crash_ping(&mut self, meta_data: String) -> bool {
         // If metrics is not active, we should not send a crash ping.
         if !self.is_active {
+            logger().log(LogLevelFilter::Info, "send_crash_ping - controller is not active");
             return false;   //you need the return here as Rust is expression oriented
         }
 
@@ -168,13 +168,19 @@ impl MetricsController {
         // needs to be explicitly passed as mutable otherwise it will
         // be seen as immutable.
         let result = self.send(&mut sender);
-        println!("send result: {}", result);
+
+        logger().log(LogLevelFilter::Info, format!("send_crash_ping result: {}", result).as_str());
+
         result
     }
 
     // This helper function can be used to build the submission URL for
     // any of the telemetry server URLs.  The ping_type is one of:
     // CD_CRASH_TYPE or CD_METRICS_TYPE.
+    // To build to submission URL, data in the following format is appended
+    // to the base url:
+    //     docId/docType/appName/appVersion/appUpdateChannel/appBuildID
+    //
     fn build_url(&self, ping_type: &str) -> String {
         let mut full_url:String = self.telemetry_server_url.to_string();
         full_url.push_str(&self.doc_id);
@@ -233,7 +239,8 @@ impl MetricsController {
         };
         let serialized = serde_json::to_string(&cp_body).unwrap();
 
-        println!("Crash ping body: {}", serialized);
+        logger().log(LogLevelFilter::Debug, format!("Crash ping body: {}", serialized).as_str());
+
         // The body needs to be converted to a static str and you can't get
         // a static str from a String, thus you need to slice.
         let cp_body_str: &str = &serialized[..];
@@ -265,20 +272,28 @@ impl MetricsController {
         // as the condition to keep retrying or stop.
             |send_response| match *send_response {
                 Ok(ref status)=> {
-                    if *status == StatusCode::Ok {true} else {
-                        println!("Server said 'not ok', retry");
+                    if *status == StatusCode::Ok {
+                        true
+                    } else {
+                        logger().log(LogLevelFilter::Info, "Server said 'not ok' (retry)");
                         false
                     }
                 },
-                Err(ref error) => { println!("Error sending data (retry): {}", error); false},
-        }) {
+                Err(ref error) => {
+                    logger().log(LogLevelFilter::Error, format!("Error sending data (retry): {}", error).as_str());
+                    false
+                },
+            }) {
         // This below is the final disposition of retrying n times.
             Ok(_) => {
-                println!("Crash Ping Sent Successfully");
+                logger().log(LogLevelFilter::Debug, "Final disposition of 'send': success");
                 return true;
             },
             Err(error) => {
-                println!("Could not send data to server (final): {}", error);
+                logger().log(
+                    LogLevelFilter::Error,
+                    format!("Could not send data to server (final): {}", error).as_str()
+                );
                 return false;
             }
         }
@@ -316,14 +331,16 @@ impl CanRetry for MockSendWithRetry {
                 //
                 // Determine if it should succeed on the current attempt.
                 self.attempts += 1;
-                println!("In MockSendWithRetry::send, attempts: {}", self.attempts);
+                logger().log(LogLevelFilter::Info,
+                             format!("In MockSendWithRetry::send, attempts: {}", self.attempts).as_str());
                 if self.succeed_on_attempt == self.attempts {
                     self.succeeded_on_attempt = self.attempts;
-                    println!("In MockSendWithRetry::send, returning Ok (200)");
+                    logger().log(LogLevelFilter::Info, "In MockSendWithRetry::send, returning Ok (200)");
                     return Ok(StatusCode::Ok);
                 } else {
                     // No success yet, return a failure return code
-                    println!("In MockSendWithRetry::send, returning Ok (Unauthorized)");
+                    logger().log(LogLevelFilter::Info,
+                                 "In MockSendWithRetry::send, returning Ok (Unauthorized) -- retry");
                     return Ok(StatusCode::Unauthorized);
                 }
             },
@@ -335,6 +352,12 @@ impl CanRetry for MockSendWithRetry {
             }
         }
     }
+}
+
+#[cfg(test)]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MockCrashPingMetaData {
+    crash_reason: String,
 }
 
 // Create a MetricsController with predefined values
@@ -367,7 +390,8 @@ fn test_build_url() {
 #[test]
 fn test_get_crash_ping_body() {
     let controller = create_metrics_controller(true /* is_active */);
-    let meta_data = CrashDummy {
+
+    let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string()
     };
 
@@ -397,7 +421,6 @@ fn test_send_success() {
         result: SendResult::Success
     };
     let controller = create_metrics_controller(true /* is_active */);
-
     let bret = controller.send(&mut mockSender);
     assert_eq!(bret, true);
     assert_eq!(mockSender.succeeded_on_attempt, mockSender.succeed_on_attempt);
@@ -438,8 +461,9 @@ fn test_send_retry_failure() {
 
 #[test]
 fn test_send_crash_ping_metrics_disabled() {
-    let mut controller = create_metrics_controller(false /* is_active */);
-    let meta_data = CrashDummy {
+    let controller = create_metrics_controller(false /* is_active */);
+
+    let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string(),
     };
 
@@ -455,8 +479,8 @@ fn test_send_crash_ping_metrics_disabled() {
 #[test]
 #[ignore]
 fn test_send_crash_ping() {
-    let mut controller = create_metrics_controller(true /* is_active */);
-    let meta_data = CrashDummy {
+    let controller = create_metrics_controller(true /* is_active */);
+    let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string()
     };
 
@@ -471,7 +495,7 @@ fn test_send_crash_ping() {
 #[ignore]
 fn test_send_crash_ping_http_error() {
     let mut controller = create_metrics_controller(true /* is_active */);
-    let meta_data = CrashDummy {
+    let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string(),
     };
 
