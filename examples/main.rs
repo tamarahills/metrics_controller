@@ -25,17 +25,16 @@ pub struct CrashPingMetaData {
     total_virtual_memory: u64
 }
 
-
 fn main() {
-    let mut controller = MetricsController::new(true,
+    let controller = MetricsController::new(true,
         "foxbox".to_string(),
         "1.0".to_string(),
         "default".to_string(),
         "20160305".to_string(),
+        "rust".to_string(),
         "en-us".to_string(),
         "raspberry-pi".to_string(),
-        "arm".to_string(),
-        "rust".to_string());
+        "arm".to_string());
 
 
     // Format some JSON for the metaData portion of the crash ping.  This is

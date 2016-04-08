@@ -1,9 +1,8 @@
-#![allow(non_snake_case)]
-#![allow(dead_code)]
 // TODO:  eventually remove this if we think it's ok to send snake case to
 // the telemetry server.  Rust does not allow this as an inner attribute lower
 // in the code for now, so we have to have it at the module level to avoid the
 // warning for now.
+#![allow(non_snake_case)]
 extern crate hyper;
 extern crate retry;
 extern crate serde_json;
@@ -34,14 +33,14 @@ const TELEMETRY_SERVER_URL: &'static str = "https://incoming.telemetry.mozilla.o
 const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CrashPingPayload {
+struct CrashPingPayload {
     revision: String,
     v: String,
     metadata: Value,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CrashPingBody {
+struct CrashPingBody {
     v: String,
     creationDate: String,
     locale: String,
@@ -88,6 +87,7 @@ impl CanRetry for SendWithRetry {
     }
 }
 
+/// The metrics controller for the CD Metrics Library
 pub struct MetricsController {
     is_active: bool,
     telemetry_server_url: String,
@@ -96,21 +96,46 @@ pub struct MetricsController {
     app_version: String,
     app_update_channel: String,
     app_build_id: String,
+    app_platform: String,
     locale: String,
+    #[allow(dead_code)] // Issue #24
     os: String,
+    #[allow(dead_code)] // Issue #24
     osversion: String,
     device: String,
     arch: String,
-    platform: String,
     mw: MetricsWorker,
 }
 
 impl MetricsController {
 
+    //  Note: The following code example produces an 'unused variable' warning
+    //        so it is being ignored for the purpose of running tests.
+
+    /// Constructs a new `MetricsController`. Caller passes information
+    /// about their application and environment and also whether the controller
+    /// should be active (should be inactive, for example, if the user has
+    /// opted-out of metrics collection).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use metrics_controller::controller::MetricsController;
+    /// let mc = MetricsController::new(
+    ///     true,
+    ///     "foxbox".to_string(),
+    ///     "1.0".to_string(),
+    ///     "beta".to_string(),
+    ///     "20160522".to_string(),
+    ///     "rust".to_string(),
+    ///     "en-us".to_string(),
+    ///     "RPi2".to_string(),
+    ///     "arm".to_string());
+    /// ```
     pub fn new(is_active: bool, app_name: String, app_version: String,
-               app_update_channel: String, app_build_id: String, locale: String,
-               device: String, arch: String,
-               platform: String) -> MetricsController {
+               app_update_channel: String, app_build_id: String,
+               app_platform: String, locale: String,
+               device: String, arch: String) -> MetricsController {
         let mut helper = SysInfoHelper;
 
         MetricsController {
@@ -121,20 +146,20 @@ impl MetricsController {
             app_version: app_version,
             app_update_channel: app_update_channel,
             app_build_id: app_build_id,
+            app_platform: app_platform,
             locale: locale,
             os: get_os(&mut helper),
             osversion: get_os_version(&mut helper),
             device: device,
             arch: arch,
-            platform: platform,
             mw: MetricsWorker::new()
         }
     }
 
-    // This function is called to start the metrics service.  It also starts the
-    // worker thread needed to operate the metrics service.  The worker thread
-    // is responsible for 1) Initiating the worker thread, 2) periodically
-    // persisting the histograms to disk, 3 transmitting the data to the telemetry server.
+    /// This function is called to start the metrics service.  It also starts the
+    /// worker thread needed to operate the metrics service.  The worker thread
+    /// is responsible for periodically: persisting the histogram data and
+    /// transmitting it to the telemetry server.
     pub fn start_metrics(&mut self) -> bool {
         //Data needs to be read from disk here.  Let's assume that the controller
         //owns the histogram data for now.
@@ -148,13 +173,45 @@ impl MetricsController {
         true
     }
 
+    /// Stops the metrics service and deletes metrics data that has been collected
+    /// but not sent to the server.
     pub fn stop_collecting(&mut self) {
         // TODO:  Eventually, this API will need to also delete the Histograms
         // from memory and delete the ones on disk.
         self.mw.quit();
     }
 
-    pub fn send_crash_ping(&mut self, meta_data: String) -> bool {
+    //  Note: Do not run the following code as part of cargo test; it hits
+    //        the server so it should not be run as part of the build tests.
+
+    /// Sends crash details to the Mozilla telemetry server. Details include
+    /// the environment information specified when instantiating the
+    /// MetricsController as well as metadata regarding the crash that is being
+    /// reported (for example, the call stack). The 'meta_data' parameter is a
+    /// JSON string.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// # use metrics_controller::controller::MetricsController;
+    /// # let mc = MetricsController::new(
+    /// #     true,
+    /// #     "foxbox".to_string(),
+    /// #     "1.0".to_string(),
+    /// #     "beta".to_string(),
+    /// #     "20160522".to_string(),
+    /// #     "java".to_string(),
+    /// #     "en-us".to_string(),
+    /// #     "RPi2".to_string(),
+    /// #     "arm".to_string());
+    ///    mc.send_crash_ping("{
+    ///        \"metadata\": {
+    ///            \"callstack\": \"exception in thread 'main' NullPointerException ...\"
+    ///        }
+    ///    }".to_string());
+    /// ```
+    pub fn send_crash_ping(self, meta_data: String) -> bool {
+
         // If metrics is not active, we should not send a crash ping.
         if !self.is_active {
             logger().log(LogLevelFilter::Info, "send_crash_ping - controller is not active");
@@ -240,7 +297,7 @@ impl MetricsController {
             osversion: self.get_os_version(),
             device: self.device.clone(),
             arch: self.arch.clone(),
-            platform: self.platform.clone(),
+            platform: self.app_platform.clone(),
             payload: Some(CrashPingPayload {
                 revision: "1".to_string(),
                 v: "1".to_string(),
@@ -380,10 +437,10 @@ fn create_metrics_controller(is_active: bool) -> MetricsController {
         "1.0".to_string(),
         "default".to_string(),
         "20160305".to_string(),
+        "rust".to_string(),
         "en-us".to_string(),
         "raspberry-pi".to_string(),
-        "arm".to_string(),
-        "rust".to_string())
+        "arm".to_string())
 }
 
 #[test]
@@ -471,7 +528,7 @@ fn test_send_retry_failure() {
 
 #[test]
 fn test_send_crash_ping_metrics_disabled() {
-    let mut controller = create_metrics_controller(false /* is_active */);
+    let controller = create_metrics_controller(false /* is_active */);
 
     let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string(),
@@ -489,7 +546,7 @@ fn test_send_crash_ping_metrics_disabled() {
 #[test]
 #[ignore]
 fn test_send_crash_ping() {
-    let mut controller = create_metrics_controller(true /* is_active */);
+    let controller = create_metrics_controller(true /* is_active */);
     let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string()
     };
