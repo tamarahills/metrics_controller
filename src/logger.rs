@@ -1,9 +1,9 @@
 extern crate env_logger;
 
-use       log::{LogRecord, LogLevelFilter};
+use log::{LogRecord, LogLevelFilter};
 use self::env_logger::LogBuilder;
-use       std::collections::HashMap;
-use       std::env;
+use std::collections::HashMap;
+use std::env;
 
 static LOG_PREFIX: &'static str = "CD-METRICS";
 

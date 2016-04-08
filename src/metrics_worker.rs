@@ -5,11 +5,26 @@ extern crate serde_json;
 
 use self::serde_json::Value;
 use config::Config;
+use log::LogLevelFilter;
+use logger::MetricsLoggerFactory;
+use logger::MetricsLogger;
+use std::io::prelude::*;
+#[allow(unused_imports)]
 use std::sync::mpsc::channel;
-use std::sync::mpsc::Sender;
 use std::sync::mpsc::Receiver;
+use std::sync::mpsc::Sender;
 use std::thread;
 use std::thread::JoinHandle;
+
+#[allow(non_upper_case_globals)]
+const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
+
+const DEFAULT_SEND:u64 = 1209600;
+const DEFAULT_SAVE:u64 = 3600;
+const DEFAULT_START:u64 = 0;
+const KEY_START:&'static str = "startTime";
+const KEY_SAVE:&'static str = "saveInterval";
+const KEY_SEND:&'static str = "sendInterval";
 
 pub enum TimerOp {
     Send,
@@ -32,23 +47,22 @@ pub struct MetricsTimer {
 impl MetricsTimer {
     pub fn new() -> MetricsTimer {
         MetricsTimer{
-    //TODO: CHANGE TO CONSTANTS
-            send_interval: 1209600,     // Two weeks default
-            save_interval: 3600,        // one hour default
-            start_time: 0,
+            send_interval: DEFAULT_SEND,
+            save_interval: DEFAULT_SAVE,
+            start_time: DEFAULT_START,
         }
     }
 
     fn init(&mut self) {
         let mut cfg = Config::new();
         cfg.init("metricsconfig.json");
-        self.send_interval = cfg.get_u64("sendInterval");
-        self.save_interval = cfg.get_u64("saveInterval");
+        self.send_interval = cfg.get_u64(KEY_SEND);
+        self.save_interval = cfg.get_u64(KEY_SAVE);
 
         // The startTime is a special case and could be empty initially.
-        let val: Option<Value> = cfg.get("startTime");
+        let val: Option<Value> = cfg.get(KEY_START);
         match val {
-            Some(_) => self.start_time = cfg.get_u64("startTime"),
+            Some(_) => self.start_time = cfg.get_u64(KEY_START),
             None => {
                 self.start_time = 0;
             },
@@ -69,6 +83,8 @@ impl MetricsTimer {
             //Calculate the next interval.. either remaining time til send or
             //time til save.
             let secs_til_send = now.sec as u64 - self.start_time;
+            // If it's time to send in 60 seconds and save interval is 120 secs
+            // set the timer for 60 sec.  Otherwise, just set it for save interval.
             if secs_til_send < self.save_interval {
                 return secs_til_send as i64;
             } else {
@@ -83,7 +99,7 @@ impl MetricsTimer {
         if self.start_time == 0 {
             return TimerOp::None;
         } else {
-            //here if it's either time to send or time to save or send.
+            //here if it's either time to send or time to save.
             if now.sec as u64 - self.start_time >= self.send_interval {
                 self.start_time = 0; // so we know to start a new timer.
                 return TimerOp::Send;
@@ -110,6 +126,7 @@ impl MetricsSender {
 
 pub struct MetricsWorker {
     metrics_send: MetricsSender,
+    #[allow(dead_code)]
     join_handle: Option<JoinHandle<()>>,
 }
 
@@ -124,18 +141,18 @@ impl MetricsWorker {
                 mt.init();
 
                 let timer = timer::Timer::new();
-
+                let mut tt = ThreadTest::new();
                 loop {
                     let timer_result = mt.get_timer_op();
                     match timer_result {
                         TimerOp::None => {
-                            println!("Time to do nothing");
+                            logger().log(LogLevelFilter::Debug, "TimerOp::None");
                         }
                         TimerOp::Send => {
-                            println!("Time to transmit");
+                            logger().log(LogLevelFilter::Debug, "TimerOp::Send");
                         }
                         TimerOp::Save => {
-                            println!("Time to save");
+                            logger().log(LogLevelFilter::Debug, "TimerOp::Save");
                         }
                     }
                     let dur: i64 = mt.get_timer_interval();
@@ -143,21 +160,29 @@ impl MetricsWorker {
                     let guard = timer.schedule_with_delay(chrono::Duration::seconds(dur), move|| {
                         tx.send(ThreadMsg::Continue).unwrap();
                     });
-                    // Add a comment here to explain ignore does nothing.
+                    // The guard variable is need to ensure that the timer does not
+                    // go out of scope.  It is a feature of the timer library o make sure that
+                    // there are not extra timers lying around.  Then this brings a warning
+                    // that guard is not used so the ignore function is essentially a no-op.
                     guard.ignore();
                     //This is a blocking call
                     let res = receiver.recv();
+                    logger().log(LogLevelFilter::Debug, "After recv");
+
+                    tt.increment();
 
                     match res {
                         Ok(val) => {
                             match val {
                                 ThreadMsg::Continue => continue,
-                                ThreadMsg::Quit => break,
+                                ThreadMsg::Quit => {
+                                    tt.write();
+                                    break;
+                                }
                             }
                         }
                         Err(err) => {println!("error: {}", err);}
                     }
-                    println!("tamara: after recv");
                 }
             })),
         }
@@ -165,6 +190,50 @@ impl MetricsWorker {
 
     pub fn quit(&self) {
         self.metrics_send.sender.send(ThreadMsg::Quit).unwrap();
+    }
+}
+
+
+
+// This is a test struct used for integration tests.  It writes the result of
+// what the thread loop does to a file that is read and validated by the
+// integration test.
+struct ThreadTest {
+    timer_count: u8,
+}
+
+impl ThreadTest {
+    fn new()->ThreadTest {
+        ThreadTest {
+            timer_count:0,
+        }
+    }
+
+    fn increment(&mut self) {
+        self.timer_count = self.timer_count + 1;
+    }
+    #[cfg(not(test))]
+    fn write(&mut self) {
+        use std::fs::File;
+        use std::error::Error;
+
+        match File::create("thread.dat") {
+            Err(why) => panic!("couldn't open:{}",Error::description(&why)),
+            Ok(mut f) => {
+                f.write(&[self.timer_count]);
+                match f.sync_all() {
+                    Ok(_) => {
+                        drop(f);
+                    }
+                    Err(e) => panic!("couldn't flush: {}", Error::description(&e))
+                }
+            }
+        }
+    }
+
+    #[cfg(test)]
+    fn write(&mut self){
+        logger().log(LogLevelFilter::Debug, "Calling the no-op ThreadTest::write");
     }
 }
 

@@ -10,7 +10,7 @@ use logger::MetricsLogger;
 // is an absolute path. An alternative is to actually specify the
 // full path, e.g.,
 // 'use gzip::flate2::write::GzEncoder'
-// 
+//
 // 'self' is more flexible since it doesn't need to be changed should
 // the name of the module in which this code is being used change.
 //
@@ -44,7 +44,7 @@ fn test_encode() {
   assert_eq!(compressed, v_expected);
 }
 
- 
+
 pub struct Gzip {
   input: String
 }

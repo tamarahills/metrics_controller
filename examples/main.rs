@@ -56,8 +56,5 @@ fn main() {
     let serialized = serde_json::to_string(&meta_data).unwrap();
 
     controller.send_crash_ping(serialized);
-
-    controller.start_metrics();
-
     thread::sleep(std::time::Duration::from_secs(75));
 }

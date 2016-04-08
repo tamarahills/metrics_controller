@@ -16,8 +16,8 @@ use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
 use self::serde_json::Value;
-use sysinfo::*;
 use self::uuid::Uuid;
+use sysinfo::*;
 
 // hyper Error uses this trait, necessary when using Error methods,
 // e.g., 'description'
@@ -101,6 +101,7 @@ pub struct MetricsController {
     device: String,
     arch: String,
     platform: String,
+    mw: MetricsWorker,
 }
 
 impl MetricsController {
@@ -123,7 +124,8 @@ impl MetricsController {
             osversion: get_os_version(&mut helper),
             device: device,
             arch: arch,
-            platform: platform
+            platform: platform,
+            mw: MetricsWorker::new()
         }
     }
 
@@ -140,8 +142,12 @@ impl MetricsController {
         // histograms in separate structs in separate files.  Controller maintains
         // a refernce to the in memory histograms.  Worker thread also needs it.
         // We would prefer to use a singleton pattern.
-        MetricsWorker::new();
+        //MetricsWorker::new();
         true
+    }
+
+    pub fn stop_metrics(&mut self) {
+        self.mw.quit();
     }
 
     pub fn send_crash_ping(&mut self, meta_data: String) -> bool {
@@ -297,6 +303,9 @@ impl MetricsController {
                 return false;
             }
         }
+    }
+    pub fn get_counts() -> i32 {
+        3
     }
 }
 
@@ -461,7 +470,7 @@ fn test_send_retry_failure() {
 
 #[test]
 fn test_send_crash_ping_metrics_disabled() {
-    let controller = create_metrics_controller(false /* is_active */);
+    let mut controller = create_metrics_controller(false /* is_active */);
 
     let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string(),
@@ -479,7 +488,7 @@ fn test_send_crash_ping_metrics_disabled() {
 #[test]
 #[ignore]
 fn test_send_crash_ping() {
-    let controller = create_metrics_controller(true /* is_active */);
+    let mut controller = create_metrics_controller(true /* is_active */);
     let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string()
     };

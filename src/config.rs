@@ -1,14 +1,23 @@
 extern crate serde_json;
 
+use log::LogLevelFilter;
+use logger::MetricsLoggerFactory;
+use logger::MetricsLogger;
 use self::serde_json::Value;
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 use std::collections::BTreeMap;
+
+
 //This is the config file that reads all the json from metricsconfig.json.  We can initially use
 //an environment variable to locate this file or can be passed in.
 // The worker thread and the app thread will both read from this file.
+
+
+#[allow(non_upper_case_globals)]
+const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
 
 pub struct Config {
     parsed_json: Option<BTreeMap<String, Value>>,
@@ -24,13 +33,11 @@ impl Config {
 
     pub fn init(&mut self, file_name: &str) {
         //TODO:  Need to make this look at env variable or take a path to the file.
-        println!("file: {}", file_name);
+        logger().log(LogLevelFilter::Debug, format!("config file: {}", file_name).as_str());
         let path = Path::new(file_name);
         let display = path.display();
         // Open the path in read-only mode.
         let mut file = match File::open(&path) {
-            //TODO:  integrate logging here to print out the description as an
-            //error log
             Err(why) => panic!("couldn't open {}: {}", display,
                                                        Error::description(&why)),
             Ok(file) => file,
@@ -41,7 +48,8 @@ impl Config {
         match file.read_to_string(&mut s) {
             Err(why) => panic!("couldn't read {}: {}", display,
                                                        Error::description(&why)),
-            Ok(_) => println!("{} contains:\n{}", display, s),
+            Ok(_) => logger().log(LogLevelFilter::Debug,
+                format!("file contains: {}", s).as_str()),
         }
         self.parse_json(s);
     }
