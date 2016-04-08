@@ -1,11 +1,14 @@
 #![feature(custom_derive, plugin)]
 #![plugin(serde_macros)]
 
+extern crate chrono;
 extern crate serde;
 extern crate serde_json;
-
+extern crate timer;
 extern crate metrics_controller;
+
 use metrics_controller::MetricsController;
+use std::thread;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CrashPingMetaData {
@@ -24,7 +27,7 @@ pub struct CrashPingMetaData {
 
 
 fn main() {
-    let controller = MetricsController::new(true,
+    let mut controller = MetricsController::new(true,
         "foxbox".to_string(),
         "1.0".to_string(),
         "default".to_string(),
@@ -51,4 +54,6 @@ fn main() {
     let serialized = serde_json::to_string(&meta_data).unwrap();
 
     controller.send_crash_ping(serialized);
+    // This sleep is necessary so the main thread does not exit.
+    thread::sleep(std::time::Duration::from_secs(30));
 }

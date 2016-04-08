@@ -10,13 +10,14 @@ extern crate serde_json;
 extern crate time;
 extern crate uuid;
 
-use       gzip::Gzip;
+use metrics_worker::MetricsWorker;
+use gzip::Gzip;
 use self::hyper::status::StatusCode;
-use       log::LogLevelFilter;
-use       logger::MetricsLoggerFactory;
-use       logger::MetricsLogger;
+use log::LogLevelFilter;
+use logger::MetricsLoggerFactory;
+use logger::MetricsLogger;
 use self::serde_json::Value;
-use       sysinfo::*;
+use sysinfo::*;
 use self::uuid::Uuid;
 
 // hyper Error uses this trait, necessary when using Error methods,
@@ -101,6 +102,7 @@ pub struct MetricsController {
     device: String,
     arch: String,
     platform: String,
+    mw: MetricsWorker,
 }
 
 impl MetricsController {
@@ -124,11 +126,35 @@ impl MetricsController {
             osversion: get_os_version(&mut helper),
             device: device,
             arch: arch,
-            platform: platform
+            platform: platform,
+            mw: MetricsWorker::new()
         }
     }
 
-    pub fn send_crash_ping(self, meta_data: String) -> bool {
+    // This function is called to start the metrics service.  It also starts the
+    // worker thread needed to operate the metrics service.  The worker thread
+    // is responsible for 1) Initiating the worker thread, 2) periodically
+    // persisting the histograms to disk, 3 transmitting the data to the telemetry server.
+    pub fn start_metrics(&mut self) -> bool {
+        //Data needs to be read from disk here.  Let's assume that the controller
+        //owns the histogram data for now.
+        // Needs to call persistence module to read the data file.
+        // Call config.init()
+        // Call persistence.read() and populate histograms in memory in controller.
+        // histograms in separate structs in separate files.  Controller maintains
+        // a refernce to the in memory histograms.  Worker thread also needs it.
+        // We would prefer to use a singleton pattern.
+        //MetricsWorker::new();
+        true
+    }
+
+    pub fn stop_collecting(&mut self) {
+        // TODO:  Eventually, this API will need to also delete the Histograms
+        // from memory and delete the ones on disk.
+        self.mw.quit();
+    }
+
+    pub fn send_crash_ping(&mut self, meta_data: String) -> bool {
         // If metrics is not active, we should not send a crash ping.
         if !self.is_active {
             logger().log(LogLevelFilter::Info, "send_crash_ping - controller is not active");
@@ -247,13 +273,13 @@ impl MetricsController {
 
     fn send<T: CanRetry>(&self, sender: &mut T) -> bool {
 
-      // This function retries sending the crash ping a given number of times
-      // and waits a given number of msecs in between retries.
+        // This function retries sending the crash ping a given number of times
+        // and waits a given number of msecs in between retries.
         match retry::retry(sender.get_retries(), sender.get_wait_time(),
             || sender.send(),
-        // This next line evaluates to true if the request was successful
-        // and false if it failed and we need to retry.  Think of this
-        // as the condition to keep retrying or stop.
+            // This next line evaluates to true if the request was successful
+            // and false if it failed and we need to retry.  Think of this
+            // as the condition to keep retrying or stop.
             |send_response| match *send_response {
                 Ok(ref status)=> {
                     if *status == StatusCode::Ok {
@@ -268,7 +294,7 @@ impl MetricsController {
                     false
                 },
             }) {
-        // This below is the final disposition of retrying n times.
+            // This below is the final disposition of retrying n times.
             Ok(_) => {
                 logger().log(LogLevelFilter::Debug, "Final disposition of 'send': success");
                 return true;
@@ -445,7 +471,7 @@ fn test_send_retry_failure() {
 
 #[test]
 fn test_send_crash_ping_metrics_disabled() {
-    let controller = create_metrics_controller(false /* is_active */);
+    let mut controller = create_metrics_controller(false /* is_active */);
 
     let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string(),
@@ -463,7 +489,7 @@ fn test_send_crash_ping_metrics_disabled() {
 #[test]
 #[ignore]
 fn test_send_crash_ping() {
-    let controller = create_metrics_controller(true /* is_active */);
+    let mut controller = create_metrics_controller(true /* is_active */);
     let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string()
     };
