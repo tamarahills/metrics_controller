@@ -10,14 +10,15 @@ extern crate serde_json;
 extern crate time;
 extern crate uuid;
 
-use       gzip::Gzip;
+use metrics_worker::MetricsWorker;
+use gzip::Gzip;
 use self::hyper::status::StatusCode;
-use       log::LogLevelFilter;
-use       logger::MetricsLoggerFactory;
-use       logger::MetricsLogger;
+use log::LogLevelFilter;
+use logger::MetricsLoggerFactory;
+use logger::MetricsLogger;
 use self::serde_json::Value;
-use       sysinfo::*;
 use self::uuid::Uuid;
+use sysinfo::*;
 
 // hyper Error uses this trait, necessary when using Error methods,
 // e.g., 'description'
@@ -101,6 +102,7 @@ pub struct MetricsController {
     device: String,
     arch: String,
     platform: String,
+    mw: MetricsWorker,
 }
 
 impl MetricsController {
@@ -110,7 +112,6 @@ impl MetricsController {
                device: String, arch: String,
                platform: String) -> MetricsController {
         let mut helper = SysInfoHelper;
-
         MetricsController {
             is_active: is_active,
             telemetry_server_url: TELEMETRY_SERVER_URL.to_string(),
@@ -124,11 +125,33 @@ impl MetricsController {
             osversion: get_os_version(&mut helper),
             device: device,
             arch: arch,
-            platform: platform
+            platform: platform,
+            mw: MetricsWorker::new()
         }
     }
 
-    pub fn send_crash_ping(self, meta_data: String) -> bool {
+    // This function is called to start the metrics service.  It also starts the
+    // worker thread needed to operate the metrics service.  The worker thread
+    // is responsible for 1) Initiating the worker thread, 2) periodically
+    // persisting the histograms to disk, 3 transmitting the data to the telemetry server.
+    pub fn start_metrics(&mut self) -> bool {
+        //Data needs to be read from disk here.  Let's assume that the controller
+        //owns the histogram data for now.
+        // Needs to call persistence module to read the data file.
+        // Call config.init()
+        // Call persistence.read() and populate histograms in memory in controller.
+        // histograms in separate structs in separate files.  Controller maintains
+        // a refernce to the in memory histograms.  Worker thread also needs it.
+        // We would prefer to use a singleton pattern.
+        //MetricsWorker::new();
+        true
+    }
+
+    pub fn stop_metrics(&mut self) {
+        self.mw.quit();
+    }
+
+    pub fn send_crash_ping(&mut self, meta_data: String) -> bool {
         // If metrics is not active, we should not send a crash ping.
         if !self.is_active {
             logger().log(LogLevelFilter::Info, "send_crash_ping - controller is not active");
@@ -281,6 +304,9 @@ impl MetricsController {
                 return false;
             }
         }
+    }
+    pub fn get_counts() -> i32 {
+        3
     }
 }
 
@@ -445,7 +471,7 @@ fn test_send_retry_failure() {
 
 #[test]
 fn test_send_crash_ping_metrics_disabled() {
-    let controller = create_metrics_controller(false /* is_active */);
+    let mut controller = create_metrics_controller(false /* is_active */);
 
     let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string(),
@@ -463,7 +489,7 @@ fn test_send_crash_ping_metrics_disabled() {
 #[test]
 #[ignore]
 fn test_send_crash_ping() {
-    let controller = create_metrics_controller(true /* is_active */);
+    let mut controller = create_metrics_controller(true /* is_active */);
     let meta_data = MockCrashPingMetaData {
         crash_reason: "bad code".to_string()
     };
