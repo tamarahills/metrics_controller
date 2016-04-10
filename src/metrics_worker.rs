@@ -2,6 +2,7 @@ extern crate chrono;
 extern crate time;
 extern crate timer;
 extern crate serde_json;
+extern crate telemetry;
 
 use self::serde_json::Value;
 use config::Config;
@@ -15,6 +16,10 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::thread::JoinHandle;
+use hist::HistStorage;
+use std::sync::{Arc, Mutex};
+use std::collections::BTreeMap;
+use self::telemetry::plain::*;
 
 #[allow(non_upper_case_globals)]
 const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
@@ -131,9 +136,10 @@ pub struct MetricsWorker {
 }
 
 impl MetricsWorker {
-    pub fn new() -> MetricsWorker {
+    pub fn new(h:Arc<Mutex<HistStorage>>) -> MetricsWorker {
         let (ms, receiver, sender) = MetricsSender::new();
 
+        let histo = h.clone();
         MetricsWorker {
             metrics_send: ms,
             join_handle: Some(thread::spawn(move || {
@@ -149,6 +155,13 @@ impl MetricsWorker {
                             logger().log(LogLevelFilter::Debug, "TimerOp::None");
                         }
                         TimerOp::Send => {
+                            //Demonstrate accessing the histogram object from this thread.
+                            // Caution: This lock is held until hist_data goes out of scope!
+                            // Note we won't actually be creating histogram here, but This
+                            //demonstrates the concept of accessing the shared data.
+                            let mut hist_data = histo.lock().unwrap();
+                            hist_data.create_linear_histogram("tamara", 1, 100, 10);
+
                             logger().log(LogLevelFilter::Debug, "TimerOp::Send");
                         }
                         TimerOp::Save => {

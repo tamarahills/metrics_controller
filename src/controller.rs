@@ -11,6 +11,7 @@ extern crate uuid;
 
 use metrics_worker::MetricsWorker;
 use gzip::Gzip;
+use hist::HistStorage;
 use self::hyper::status::StatusCode;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
@@ -18,6 +19,7 @@ use logger::MetricsLogger;
 use self::serde_json::Value;
 use sysinfo::*;
 use self::uuid::Uuid;
+use std::sync::{Arc, Mutex};
 
 // hyper Error uses this trait, necessary when using Error methods,
 // e.g., 'description'
@@ -104,6 +106,7 @@ pub struct MetricsController {
     osversion: String,
     device: String,
     arch: String,
+    hs: Arc<Mutex<HistStorage>>,
     mw: MetricsWorker,
 }
 
@@ -137,7 +140,7 @@ impl MetricsController {
                app_platform: String, locale: String,
                device: String, arch: String) -> MetricsController {
         let mut helper = SysInfoHelper;
-
+        let h = Arc::new(Mutex::new(HistStorage::new()));
         MetricsController {
             is_active: is_active,
             telemetry_server_url: TELEMETRY_SERVER_URL.to_string(),
@@ -152,7 +155,8 @@ impl MetricsController {
             osversion: get_os_version(&mut helper),
             device: device,
             arch: arch,
-            mw: MetricsWorker::new()
+            hs: h.clone(),
+            mw: MetricsWorker::new(h)
         }
     }
 
@@ -240,6 +244,15 @@ impl MetricsController {
 
         result
     }
+
+    pub fn create_linear_histogram(&mut self, name: &str, min: u32, max: u32, buckets: usize)  {
+        self.hs.lock().unwrap().create_linear_histogram(name, min, max, buckets);
+    }
+
+    pub fn record_linear(&mut self, name: &str, value: u32) {
+        self.hs.lock().unwrap().record_linear(name, value);
+    }
+
 
     // This helper function can be used to build the submission URL for
     // any of the telemetry server URLs.  The ping_type is one of:
