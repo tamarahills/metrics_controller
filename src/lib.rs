@@ -19,3 +19,4 @@ mod sysinfo;
 mod logger;
 mod metrics_worker;
 mod config;
+mod hist;
