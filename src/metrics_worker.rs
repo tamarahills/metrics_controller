@@ -5,10 +5,12 @@ extern crate serde_json;
 
 use self::serde_json::Value;
 use config::Config;
+use hist::Histograms;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
 use std::io::prelude::*;
+use std::sync::{Arc, Mutex};
 #[allow(unused_imports)]
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Receiver;
@@ -131,9 +133,9 @@ pub struct MetricsWorker {
 }
 
 impl MetricsWorker {
-    pub fn new() -> MetricsWorker {
+    pub fn new(hist_mutex: Arc<Mutex<Histograms>>) -> MetricsWorker {
         let (ms, receiver, sender) = MetricsSender::new();
-
+        let histo = hist_mutex.clone();
         MetricsWorker {
             metrics_send: ms,
             join_handle: Some(thread::spawn(move || {
@@ -149,7 +151,9 @@ impl MetricsWorker {
                             logger().log(LogLevelFilter::Debug, "TimerOp::None");
                         }
                         TimerOp::Send => {
-                            logger().log(LogLevelFilter::Debug, "TimerOp::Send");
+                            let hist_data = histo.lock().unwrap();
+                            let json = hist_data.serialize_to_json();
+                            logger().log(LogLevelFilter::Debug, format!("TimerOp::Send: {}", json).as_str());
                         }
                         TimerOp::Save => {
                             logger().log(LogLevelFilter::Debug, "TimerOp::Save");
@@ -311,7 +315,10 @@ describe! metrics_worker {
     before_each {
         #[allow(unused_imports)]
         use metrics_worker::time::get_time;
-        let mut mw = MetricsWorker::new();
+        use hist::Histograms;
+        use std::sync::{Arc, Mutex};
+
+        let mut mw = MetricsWorker::new(Arc::new(Mutex::new(Histograms::new())));
     }
 
     it "should gracefully exit when quit is sent" {

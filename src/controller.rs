@@ -11,6 +11,7 @@ extern crate uuid;
 
 use metrics_worker::MetricsWorker;
 use gzip::Gzip;
+use hist::Histograms;
 use self::hyper::status::StatusCode;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
@@ -18,6 +19,7 @@ use logger::MetricsLogger;
 use self::serde_json::Value;
 use sysinfo::*;
 use self::uuid::Uuid;
+use std::sync::{Arc, Mutex};
 
 // hyper Error uses this trait, necessary when using Error methods,
 // e.g., 'description'
@@ -104,6 +106,8 @@ pub struct MetricsController {
     osversion: String,
     device: String,
     arch: String,
+    #[allow(dead_code)] // Issue #33 -- Will go away with subsequent commits.
+    hs: Arc<Mutex<Histograms>>,
     mw: MetricsWorker,
 }
 
@@ -137,7 +141,7 @@ impl MetricsController {
                app_platform: String, locale: String,
                device: String, arch: String) -> MetricsController {
         let mut helper = SysInfoHelper;
-
+        let histograms = Arc::new(Mutex::new(Histograms::new()));
         MetricsController {
             is_active: is_active,
             telemetry_server_url: TELEMETRY_SERVER_URL.to_string(),
@@ -152,7 +156,8 @@ impl MetricsController {
             osversion: get_os_version(&mut helper),
             device: device,
             arch: arch,
-            mw: MetricsWorker::new()
+            hs: histograms.clone(),
+            mw: MetricsWorker::new(histograms)
         }
     }
 
