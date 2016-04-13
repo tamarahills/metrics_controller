@@ -2,6 +2,8 @@
 #![plugin(serde_macros)]
 #![cfg_attr(test, plugin(stainless))]
 
+extern crate serde;
+extern crate serde_json;
 extern crate chrono;
 extern crate metrics_controller;
 extern crate timer;
@@ -59,4 +61,53 @@ fn test_thread_timer() {
         Err(why) => panic!("couldn't delete: {}", Error::description(&why)),
         Ok(_) => println!("deleted"),
     }
+}
+
+#[cfg(test)]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MockCrashPingMetaData {
+    crash_reason: String,
+}
+
+#[cfg(test)]
+fn create_metrics_controller(is_active: bool) -> MetricsController {
+    MetricsController::new(
+        is_active,
+        "app".to_string(),
+        "1.0".to_string(),
+        "default".to_string(),
+        "20160305".to_string(),
+        "en-us".to_string(),
+        "raspberry-pi".to_string(),
+        "arm".to_string(),
+        "rust".to_string())
+}
+
+//      This is an end-to-end test that sends data to the server.
+#[test]
+fn test_send_crash_ping() {
+    let mut controller = create_metrics_controller(true /* is_active */);
+    let meta_data = MockCrashPingMetaData {
+        crash_reason: "bad code".to_string()
+    };
+
+    let serialized = serde_json::to_string(&meta_data).unwrap();
+    let bret = controller.send_crash_ping(serialized);
+    assert_eq!(bret, true);
+}
+
+//      This is an end-to-end test that hits the server.
+#[test]
+fn test_send_crash_ping_http_error() {
+    let mut controller = create_metrics_controller(true /* is_active */);
+    let meta_data = MockCrashPingMetaData {
+        crash_reason: "bad code".to_string(),
+    };
+
+    // This URL is configured to return a 301 error.
+    controller.set_telemetry_server_url("http://www.mocky.io/v2/56f2b8e60f0000f305b16a5c/submit/telemetry/".to_string());
+
+    let serialized = serde_json::to_string(&meta_data).unwrap();
+    let bret = controller.send_crash_ping(serialized);
+    assert_eq!(bret, false);
 }

@@ -370,6 +370,10 @@ impl MetricsController {
             }
         }
     }
+// This function is used for integration tests
+    pub fn set_telemetry_server_url(&mut self, url: String) {
+        self.telemetry_server_url = url;
+    }
 }
 
 #[cfg(test)]
@@ -543,38 +547,5 @@ fn test_send_crash_ping_metrics_disabled() {
     let bret = controller.send_crash_ping(serialized);
 
     // Crash ping should not be sent if the metrics are disabled.
-    assert_eq!(bret, false);
-}
-
-// TODO Move this to the integration tests. It is an end-to-end
-//      test that sends data to the server.
-#[test]
-#[ignore]
-fn test_send_crash_ping() {
-    let controller = create_metrics_controller(true /* is_active */);
-    let meta_data = MockCrashPingMetaData {
-        crash_reason: "bad code".to_string()
-    };
-
-    let serialized = serde_json::to_string(&meta_data).unwrap();
-    let bret = controller.send_crash_ping(serialized);
-    assert_eq!(bret, true);
-}
-
-// TODO Move this to the integration tests. It is an end-to-end
-//      test that hits the server.
-#[test]
-#[ignore]
-fn test_send_crash_ping_http_error() {
-    let mut controller = create_metrics_controller(true /* is_active */);
-    let meta_data = MockCrashPingMetaData {
-        crash_reason: "bad code".to_string(),
-    };
-
-    // This URL is configured to return a 301 error.
-    controller.telemetry_server_url = "http://www.mocky.io/v2/56f2b8e60f0000f305b16a5c/submit/telemetry/".to_string();
-
-    let serialized = serde_json::to_string(&meta_data).unwrap();
-    let bret = controller.send_crash_ping(serialized);
     assert_eq!(bret, false);
 }
