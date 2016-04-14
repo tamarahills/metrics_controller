@@ -3,6 +3,7 @@ extern crate time;
 extern crate timer;
 extern crate serde_json;
 
+use controller::AppInfo;
 use self::serde_json::Value;
 use config::Config;
 use hist::Histograms;
@@ -130,10 +131,12 @@ pub struct MetricsWorker {
     metrics_send: MetricsSender,
     #[allow(dead_code)]
     join_handle: Option<JoinHandle<()>>,
+    #[allow(dead_code)]
+    app_info: AppInfo
 }
 
 impl MetricsWorker {
-    pub fn new(hist_mutex: Arc<Mutex<Histograms>>) -> MetricsWorker {
+    pub fn new(hist_mutex: Arc<Mutex<Histograms>>, app_info: AppInfo) -> MetricsWorker {
         let (ms, receiver, sender) = MetricsSender::new();
         let histo = hist_mutex.clone();
         MetricsWorker {
@@ -189,6 +192,7 @@ impl MetricsWorker {
                     }
                 }
             })),
+            app_info: app_info
         }
     }
 
@@ -314,11 +318,24 @@ describe! metrics_timer {
 describe! metrics_worker {
     before_each {
         #[allow(unused_imports)]
+        use controller::AppInfo;
         use metrics_worker::time::get_time;
         use hist::Histograms;
         use std::sync::{Arc, Mutex};
 
-        let mut mw = MetricsWorker::new(Arc::new(Mutex::new(Histograms::new())));
+    let app_info = AppInfo {
+        locale: "en-us".to_string(),
+        os: "linux".to_string(),
+        os_version: "1.2.3.".to_string(),
+        device: "raspberry-pi".to_string(),
+        arch: "rust".to_string(),
+        app_name: "app".to_string(),
+        app_version: "1.0".to_string(),
+        app_update_channel: "default".to_string(),
+        app_build_id: "20160305".to_string(),
+        app_platform: "arm".to_string()
+    };
+        let mut mw = MetricsWorker::new(Arc::new(Mutex::new(Histograms::new())), app_info);
     }
 
     it "should gracefully exit when quit is sent" {
