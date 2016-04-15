@@ -3,32 +3,23 @@
 // in the code for now, so we have to have it at the module level to avoid the
 // warning for now.
 #![allow(non_snake_case)]
-extern crate hyper;
-extern crate retry;
 extern crate serde_json;
 extern crate time;
-extern crate uuid;
 
 use metrics_worker::MetricsWorker;
 use gzip::Gzip;
 use hist::Histograms;
-use self::hyper::status::StatusCode;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
 use self::serde_json::Value;
 use sysinfo::*;
-use self::uuid::Uuid;
 use std::sync::{Arc, Mutex};
-
-// hyper Error uses this trait, necessary when using Error methods,
-// e.g., 'description'
-use std::error::Error as StdError;
+use transmitter::Transmitter;
+use transmitter::PingType;
 
 const CRASH_PING_RETRIES: u32 = 10;
 const CRASH_PING_WAIT: u32 = 500;
-const CRASH_PING_TYPE: &'static str = "/cd-crash/";
-const TELEMETRY_SERVER_URL: &'static str = "https://incoming.telemetry.mozilla.org/submit/telemetry/";
 
 #[allow(non_upper_case_globals)]
 // Shortcut to MetricsLoggerFactory function that gets the logger instance.
@@ -41,6 +32,57 @@ struct CrashPingPayload {
     metadata: Value,
 }
 
+pub struct AppInfo {
+    pub locale: String,
+    pub os: String,
+    pub os_version: String,
+    pub device: String,
+    pub arch: String,
+    pub app_name: String,
+    pub app_version: String,
+    pub app_update_channel: String,
+    pub app_build_id: String,
+    pub app_platform: String
+}
+
+impl AppInfo {
+    pub fn new(locale: String, device: String, app_name: String,
+               app_version: String, app_update_channel: String,
+               app_build_id: String, app_platform: String,
+               arch: String) -> AppInfo {
+
+        let mut helper = SysInfoHelper;
+
+        AppInfo {
+            locale: locale,
+            os: get_os(&mut helper),
+            os_version: get_os_version(&mut helper),
+            device: device,
+            app_name: app_name,
+            app_version: app_version,
+            app_update_channel: app_update_channel,
+            app_build_id: app_build_id,
+            app_platform: app_platform,
+            arch: arch
+        }
+    }
+
+    pub fn clone(&self) -> AppInfo {
+        AppInfo {
+            locale: self.locale.clone(),
+            os: self.os.clone(),
+            os_version: self.os_version.clone(),
+            device: self.device.clone(),
+            app_name: self.app_name.clone(),
+            app_version: self.app_version.clone(),
+            app_update_channel: self.app_update_channel.clone(),
+            app_build_id: self.app_build_id.clone(),
+            app_platform: self.app_platform.clone(),
+            arch: self.arch.clone()
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct CrashPingBody {
     v: String,
@@ -51,64 +93,17 @@ struct CrashPingBody {
     device: String,
     arch: String,
     platform: String,
-    payload: Option<CrashPingPayload>,
-}
-
-// This trait is used to abstract sending data to the server.
-// There are two implementations of this trait:
-//
-// 1. SendWithRetry -- This object is used in the production
-//                     flow. It uses the hyper lib to send
-//                     data to the server.
-// 2. MockSendWithRetry  -- This object is used by the unit tests.
-//
-// TODO: Likely we will want this trait and its implementors in a
-//       a separate 'sender' module.
-trait CanRetry {
-    fn get_retries(&self) -> u32;
-    fn get_wait_time(&self) -> u32;
-    fn send(&mut self) -> Result<StatusCode, String>;
-}
-
-struct SendWithRetry {
-    url: String,
-    body: Vec<u8>,
-    retries: u32,
-    wait_time: u32
-}
-
-impl CanRetry for SendWithRetry {
-    fn get_retries(&self) -> u32 { self.retries }
-    fn get_wait_time(&self) -> u32 { self.wait_time }
-    fn send(&mut self) -> Result<StatusCode, String> {
-        let client = hyper::Client::new();
-        match client.post(&self.url).body(self.body.as_slice()).send() {
-            Ok(response) => return Ok(response.status),
-            Err(error) => return Err(error.description().to_string())
-        }
-    }
+    payload: Option<CrashPingPayload>
 }
 
 /// The metrics controller for the CD Metrics Library
 pub struct MetricsController {
     is_active: bool,
-    telemetry_server_url: String,
-    doc_id: String,
-    app_name: String,
-    app_version: String,
-    app_update_channel: String,
-    app_build_id: String,
-    app_platform: String,
-    locale: String,
-    #[allow(dead_code)] // Issue #24
-    os: String,
-    #[allow(dead_code)] // Issue #24
-    osversion: String,
-    device: String,
-    arch: String,
     #[allow(dead_code)] // Issue #33 -- Will go away with subsequent commits.
     hs: Arc<Mutex<Histograms>>,
     mw: MetricsWorker,
+    transmitter: Transmitter,
+    app_info: AppInfo
 }
 
 impl MetricsController {
@@ -140,24 +135,23 @@ impl MetricsController {
                app_update_channel: String, app_build_id: String,
                app_platform: String, locale: String,
                device: String, arch: String) -> MetricsController {
-        let mut helper = SysInfoHelper;
         let histograms = Arc::new(Mutex::new(Histograms::new()));
+        let app_info = AppInfo::new(
+                    locale,
+                    device,
+                    app_name,
+                    app_version,
+                    app_update_channel,
+                    app_build_id,
+                    app_platform,
+                    arch);
+
         MetricsController {
             is_active: is_active,
-            telemetry_server_url: TELEMETRY_SERVER_URL.to_string(),
-            doc_id: Uuid::new_v4().to_simple_string(),
-            app_name: app_name,
-            app_version: app_version,
-            app_update_channel: app_update_channel,
-            app_build_id: app_build_id,
-            app_platform: app_platform,
-            locale: locale,
-            os: get_os(&mut helper),
-            osversion: get_os_version(&mut helper),
-            device: device,
-            arch: arch,
             hs: histograms.clone(),
-            mw: MetricsWorker::new(histograms)
+            app_info: app_info.clone(),
+            mw: MetricsWorker::new(histograms, app_info.clone()),
+            transmitter: Transmitter::new(app_info.clone())
         }
     }
 
@@ -166,6 +160,7 @@ impl MetricsController {
     /// is responsible for periodically: persisting the histogram data and
     /// transmitting it to the telemetry server.
     pub fn start_metrics(&mut self) -> bool {
+
         //Data needs to be read from disk here.  Let's assume that the controller
         //owns the histogram data for now.
         // Needs to call persistence module to read the data file.
@@ -223,53 +218,21 @@ impl MetricsController {
             return false;   //you need the return here as Rust is expression oriented
         }
 
-        let full_url = self.build_url(CRASH_PING_TYPE);
-        let cp_body = self.get_crash_ping_body(meta_data);
+        let cp_body  = self.get_crash_ping_body(meta_data);
 
-        // 'mut' is necessary to avoid the following compiler error on
-        // 'sender.send()' below:
-        // "closure cannot assign to immutable local variable `sender`"
-        let mut sender = SendWithRetry {
-          url: full_url,
-          body: cp_body,
-          retries: CRASH_PING_RETRIES,
-          wait_time: CRASH_PING_WAIT
-        };
-
-        // Rust note: Even though 'sender' is declared as mutable, it
-        // needs to be explicitly passed as mutable otherwise it will
-        // be seen as immutable.
-        let result = self.send(&mut sender);
+        let result = self.transmitter.transmit(PingType::Crash,
+                                               cp_body,
+                                               CRASH_PING_RETRIES,
+                                               CRASH_PING_WAIT);
 
         logger().log(LogLevelFilter::Info, format!("send_crash_ping result: {}", result).as_str());
 
         result
     }
 
-    // This helper function can be used to build the submission URL for
-    // any of the telemetry server URLs.  The ping_type is one of:
-    // CD_CRASH_TYPE or CD_METRICS_TYPE.
-    // To build to submission URL, data in the following format is appended
-    // to the base url:
-    //     docId/docType/appName/appVersion/appUpdateChannel/appBuildID
-    //
-    fn build_url(&self, ping_type: &str) -> String {
-        let mut full_url:String = self.telemetry_server_url.to_string();
-        full_url.push_str(&self.doc_id);
-        full_url.push_str(ping_type);
-        full_url.push_str(&self.app_name);
-        full_url.push_str(&"/".to_string());
-        full_url.push_str(&self.app_version);
-        full_url.push_str(&"/".to_string());
-        full_url.push_str(&self.app_update_channel);
-        full_url.push_str(&"/".to_string());
-        full_url.push_str(&self.app_build_id);
-        full_url
-    }
-
 #[cfg(not(test))]
     fn get_os(&self) -> String {
-        self.os.clone()
+        self.app_info.os.clone()
     }
 
 #[cfg(test)]
@@ -279,7 +242,7 @@ impl MetricsController {
 
 #[cfg(not(test))]
     fn get_os_version(&self) -> String {
-        self.osversion.clone()
+        self.app_info.os_version.clone()
     }
 
 #[cfg(test)]
@@ -297,12 +260,12 @@ impl MetricsController {
         let cp_body = CrashPingBody {
             v: "1".to_string(),
             creationDate: rfc3339_string,
-            locale: self.locale.clone(),
+            locale: self.app_info.locale.clone(),
             os: self.get_os(),
             osversion: self.get_os_version(),
-            device: self.device.clone(),
-            arch: self.arch.clone(),
-            platform: self.app_platform.clone(),
+            device: self.app_info.device.clone(),
+            arch: self.app_info.arch.clone(),
+            platform: self.app_info.app_platform.clone(),
             payload: Some(CrashPingPayload {
                 revision: "1".to_string(),
                 v: "1".to_string(),
@@ -333,96 +296,9 @@ impl MetricsController {
         "2016-03-29T10:07:18-07:00".to_string()
     }
 
-    fn send<T: CanRetry>(&self, sender: &mut T) -> bool {
-
-        // This function retries sending the crash ping a given number of times
-        // and waits a given number of msecs in between retries.
-        match retry::retry(sender.get_retries(), sender.get_wait_time(),
-            || sender.send(),
-            // This next line evaluates to true if the request was successful
-            // and false if it failed and we need to retry.  Think of this
-            // as the condition to keep retrying or stop.
-            |send_response| match *send_response {
-                Ok(ref status)=> {
-                    if *status == StatusCode::Ok {
-                        true
-                    } else {
-                        logger().log(LogLevelFilter::Info, "Server said 'not ok' (retry)");
-                        false
-                    }
-                },
-                Err(ref error) => {
-                    logger().log(LogLevelFilter::Error, format!("Error sending data (retry): {}", error).as_str());
-                    false
-                },
-            }) {
-            // This below is the final disposition of retrying n times.
-            Ok(_) => {
-                logger().log(LogLevelFilter::Debug, "Final disposition of 'send': success");
-                return true;
-            },
-            Err(error) => {
-                logger().log(
-                    LogLevelFilter::Error,
-                    format!("Could not send data to server (final): {}", error).as_str()
-                );
-                return false;
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-enum SendResult {
-    Success,
-    Failure
-}
-
-#[cfg(test)]
-struct MockSendWithRetry {
-    retries: u32,
-    wait_time: u32,
-    attempts: u32,
-    succeed_on_attempt: u32,
-    succeeded_on_attempt: u32,
-    result: SendResult
-}
-
-#[cfg(test)]
-impl CanRetry for MockSendWithRetry {
-    fn get_retries(&self) -> u32 { self.retries }
-    fn get_wait_time(&self) -> u32 { self.wait_time }
-    fn send(&mut self) -> Result<StatusCode, String> {
-        //
-        // Should the 'send' function succeed?
-        //
-        match self.result {
-            SendResult::Success => {
-                //
-                // 'send' function should succeed.
-                //
-                // Determine if it should succeed on the current attempt.
-                self.attempts += 1;
-                logger().log(LogLevelFilter::Info,
-                             format!("In MockSendWithRetry::send, attempts: {}", self.attempts).as_str());
-                if self.succeed_on_attempt == self.attempts {
-                    self.succeeded_on_attempt = self.attempts;
-                    logger().log(LogLevelFilter::Info, "In MockSendWithRetry::send, returning Ok (200)");
-                    return Ok(StatusCode::Ok);
-                } else {
-                    // No success yet, return a failure return code
-                    logger().log(LogLevelFilter::Info,
-                                 "In MockSendWithRetry::send, returning Ok (Unauthorized) -- retry");
-                    return Ok(StatusCode::Unauthorized);
-                }
-            },
-            SendResult::Failure => {
-                //
-                // Mock that the 'send' function failed. Return 'Err' object.
-                //
-                return Err("!!!!!! mock error !!!!!!!".to_string());
-            }
-        }
+#[cfg(feature = "integration")]
+    pub fn set_telemetry_server_url(&mut self, url: String) {
+        self.transmitter.set_telemetry_server_url(url);
     }
 }
 
@@ -445,18 +321,8 @@ fn create_metrics_controller(is_active: bool) -> MetricsController {
         "rust".to_string(),
         "en-us".to_string(),
         "raspberry-pi".to_string(),
-        "arm".to_string())
-}
-
-#[test]
-fn test_build_url() {
-    let mut controller = create_metrics_controller(true /* is_active */);
-
-    // Set the controller id as this is generated randomly.
-    controller.doc_id = "1234".to_string();
-    let full_url: String = controller.build_url(CRASH_PING_TYPE);
-    assert_eq!(full_url,
-        "https://incoming.telemetry.mozilla.org/submit/telemetry/1234/cd-crash/app/1.0/default/20160305")
+        "arm".to_string()
+    )
 }
 
 #[test]
@@ -483,55 +349,6 @@ fn test_get_crash_ping_body() {
 }
 
 #[test]
-fn test_send_success() {
-    let mut mockSender = MockSendWithRetry {
-        retries: 1,
-        wait_time: 1,
-        attempts: 0,
-        succeed_on_attempt: 1,
-        succeeded_on_attempt: 0, // This is populated by the test.
-        result: SendResult::Success
-    };
-    let controller = create_metrics_controller(true /* is_active */);
-    let bret = controller.send(&mut mockSender);
-    assert_eq!(bret, true);
-    assert_eq!(mockSender.succeeded_on_attempt, mockSender.succeed_on_attempt);
-}
-
-#[test]
-fn test_send_retry_success() {
-    let mut mockSender = MockSendWithRetry {
-        retries: 3,
-        wait_time: 1,
-        attempts: 0,
-        succeed_on_attempt: 3,
-        succeeded_on_attempt: 0, // This is populated by the test.
-        result: SendResult::Success
-    };
-    let controller = create_metrics_controller(true /* is_active */);
-    let bret = controller.send(&mut mockSender);
-
-    assert_eq!(bret, true);
-    assert_eq!(mockSender.succeeded_on_attempt, mockSender.succeed_on_attempt);
-}
-
-#[test]
-fn test_send_retry_failure() {
-    let mut mockSender = MockSendWithRetry {
-        retries: 2,
-        wait_time: 1,
-        attempts: 0,
-        succeed_on_attempt: 0,
-        succeeded_on_attempt: 0,
-        result: SendResult::Failure
-    };
-    let controller = create_metrics_controller(true /* is_active */);
-    let bret = controller.send(&mut mockSender);
-
-    assert_eq!(bret, false);
-}
-
-#[test]
 fn test_send_crash_ping_metrics_disabled() {
     let controller = create_metrics_controller(false /* is_active */);
 
@@ -543,38 +360,5 @@ fn test_send_crash_ping_metrics_disabled() {
     let bret = controller.send_crash_ping(serialized);
 
     // Crash ping should not be sent if the metrics are disabled.
-    assert_eq!(bret, false);
-}
-
-// TODO Move this to the integration tests. It is an end-to-end
-//      test that sends data to the server.
-#[test]
-#[ignore]
-fn test_send_crash_ping() {
-    let controller = create_metrics_controller(true /* is_active */);
-    let meta_data = MockCrashPingMetaData {
-        crash_reason: "bad code".to_string()
-    };
-
-    let serialized = serde_json::to_string(&meta_data).unwrap();
-    let bret = controller.send_crash_ping(serialized);
-    assert_eq!(bret, true);
-}
-
-// TODO Move this to the integration tests. It is an end-to-end
-//      test that hits the server.
-#[test]
-#[ignore]
-fn test_send_crash_ping_http_error() {
-    let mut controller = create_metrics_controller(true /* is_active */);
-    let meta_data = MockCrashPingMetaData {
-        crash_reason: "bad code".to_string(),
-    };
-
-    // This URL is configured to return a 301 error.
-    controller.telemetry_server_url = "http://www.mocky.io/v2/56f2b8e60f0000f305b16a5c/submit/telemetry/".to_string();
-
-    let serialized = serde_json::to_string(&meta_data).unwrap();
-    let bret = controller.send_crash_ping(serialized);
     assert_eq!(bret, false);
 }

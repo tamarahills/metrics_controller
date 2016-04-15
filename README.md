@@ -21,7 +21,7 @@ export the following environment variables pointing to your openssl sdk. For exa
     export DEP_OPENSSL_INCLUDE=/usr/local/Cellar/openssl/1.0.2f/include/
 
 ## Logging
- The metrics library uses the `env_logger` package for logging functionality. Two notable features of this package 
+ The metrics library uses the `env_logger` package for logging functionality. Two notable features of this package
 are:
 * The log messages are written to stderror
 * An environment variable is used to determine the log level
@@ -38,3 +38,7 @@ And, of course, to redirect the log messages to a file:
 
     CD_METRICS_LOG=info/CD-METRICS target/debug/examples/main 2> log
 
+## Integration Tests
+  Integration tests are found in the lib.rs file and can be run by using the command:
+
+    cargo test --features integration
