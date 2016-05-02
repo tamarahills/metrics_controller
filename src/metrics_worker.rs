@@ -319,7 +319,6 @@ describe! metrics_worker {
     before_each {
         #[allow(unused_imports)]
         use controller::AppInfo;
-        use metrics_worker::time::get_time;
         use hist::Histograms;
         use std::sync::{Arc, Mutex};
 

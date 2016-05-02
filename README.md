@@ -6,7 +6,7 @@
 * |cargo doc| -- creates 'rustdoc' documentation
 
 ## Toolchain
- run |multirust override nightly-2016-03-07| to make sure you have the correct rust version.
+ run |multirust override nightly-2016-04-10| to make sure you have the correct rust version.
 
 ### Building on OSX El Capitan
 When building from a clean state on MacOS El Capitan, if you see the following error:
@@ -21,7 +21,7 @@ export the following environment variables pointing to your openssl sdk. For exa
     export DEP_OPENSSL_INCLUDE=/usr/local/Cellar/openssl/1.0.2f/include/
 
 ## Logging
- The metrics library uses the `env_logger` package for logging functionality. Two notable features of this package 
+ The metrics library uses the `env_logger` package for logging functionality. Two notable features of this package
 are:
 * The log messages are written to stderror
 * An environment variable is used to determine the log level
@@ -37,4 +37,3 @@ This will enable info-level logging for the metrics library and all rust modules
 And, of course, to redirect the log messages to a file:
 
     CD_METRICS_LOG=info/CD-METRICS target/debug/examples/main 2> log
-
