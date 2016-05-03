@@ -7,7 +7,6 @@ extern crate serde_json;
 extern crate time;
 
 use metrics_worker::MetricsWorker;
-use gzip::Gzip;
 use hist::Histograms;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
@@ -250,7 +249,7 @@ impl MetricsController {
         "1.2.3.".to_string()
     }
 
-    fn get_crash_ping_body(&self, meta_data: String) -> Vec<u8> {
+    fn get_crash_ping_body(&self, meta_data: String) -> String {
 
         let rfc3339_string = self.get_rfc3339_string();
 
@@ -276,12 +275,7 @@ impl MetricsController {
 
         logger().log(LogLevelFilter::Debug, format!("Crash ping body: {}", serialized).as_str());
 
-        // The body needs to be converted to a static str and you can't get
-        // a static str from a String, thus you need to slice.
-        let cp_body_str: &str = &serialized[..];
-
-        let gz_body = Gzip::new(cp_body_str).encode();
-        gz_body
+        serialized
     }
 
 #[cfg(not(test))]
@@ -333,19 +327,26 @@ fn test_get_crash_ping_body() {
         crash_reason: "bad code".to_string()
     };
 
-    let mut expected = Vec::new();
-    expected.extend_from_slice(&[31,139,8,0,0,0,0,0,0,7,53,143,203,10,131,48,16,69,127,165,204,186,145,168,208,71]);
-    expected.extend_from_slice(&[214,253,132,238,203,152,76,49,16,141,76,162,84,196,127,239,68,112,19,114,79,110]);
-    expected.extend_from_slice(&[14,51,27,44,96,160,134,43,88,38,204,62,142,47,204,36,168,209,245,77,233,86,53,207]);
-    expected.extend_from_slice(&[119,173,141,190,155,250,161,228,212,90,170,33,90,12,165,68,163,154,147,128,152,36]);
-    expected.extend_from_slice(&[4,63,206,191,35,44,196,73,76,69,92,53,85,91,9,116,180,120,91,190,48,166,169,35,230]);
-    expected.extend_from_slice(&[85,77,94,56,178,237,133,34,15,18,166,128,249,27,229,42,181,57,229,66,112,13,17,29]);
-    expected.extend_from_slice(&[152,13,88,12,167,85,94,206,177,7,202,232,48,99,169,88,145,247,31,217,35,29,181,14]);
-    expected.extend_from_slice(&[221,197,70,71,176,239,251,31,190,28,208,115,232,0,0,0]);
-
-    let serialized = serde_json::to_string(&meta_data).unwrap();
-    let cp_body = controller.get_crash_ping_body(serialized);
-    assert_eq!(cp_body, expected);
+    let meta_data_string = serde_json::to_string(&meta_data).unwrap();
+    let meta_data_serialized: Value = serde_json::from_str(&meta_data_string.to_string()).unwrap();
+    let expected_cp_body = CrashPingBody {
+        v: "1".to_string(),
+        creationDate: controller.get_rfc3339_string(),
+        locale: "en-us".to_string(),
+        os: "linux".to_string(),
+        osversion: "1.2.3.".to_string(),
+        device: "raspberry-pi".to_string(),
+        arch: "arm".to_string(),
+        platform: "rust".to_string(),
+        payload: Some(CrashPingPayload {
+            revision: "1".to_string(),
+            v: "1".to_string(),
+            metadata: meta_data_serialized
+        })
+    };
+    let cp_body = controller.get_crash_ping_body(meta_data_string);
+    let expected_cp_body_serialized = serde_json::to_string(&expected_cp_body).unwrap();
+    assert_eq!(cp_body, expected_cp_body_serialized);
 }
 
 #[test]
@@ -356,8 +357,8 @@ fn test_send_crash_ping_metrics_disabled() {
         crash_reason: "bad code".to_string(),
     };
 
-    let serialized = serde_json::to_string(&meta_data).unwrap();
-    let bret = controller.send_crash_ping(serialized);
+    let meta_data_serialized = serde_json::to_string(&meta_data).unwrap();
+    let bret = controller.send_crash_ping(meta_data_serialized);
 
     // Crash ping should not be sent if the metrics are disabled.
     assert_eq!(bret, false);
@@ -373,8 +374,8 @@ fn test_send_crash_ping() {
         crash_reason: "bad code".to_string()
     };
 
-    let serialized = serde_json::to_string(&meta_data).unwrap();
-    let bret = controller.send_crash_ping(serialized);
+    let meta_data_serialized = serde_json::to_string(&meta_data).unwrap();
+    let bret = controller.send_crash_ping(meta_data_serialized);
     assert_eq!(bret, true);
 }
 

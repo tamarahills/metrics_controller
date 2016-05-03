@@ -44,7 +44,7 @@ impl Transmitter {
 
     pub fn transmit(&self,
                     ping_type: PingType,
-                    body: Vec<u8>,
+                    body: String,
                     retries: u32,
                     wait_time: u32) -> bool {
 
@@ -55,7 +55,7 @@ impl Transmitter {
         // "closure cannot assign to immutable local variable `sender`"
         let mut sender = SendWithRetry {
           url: &full_url,
-          body: body.as_slice(),
+          body: &body,
           retries: retries,
           wait_time: wait_time
         };
@@ -154,7 +154,7 @@ trait CanRetry {
 
 struct SendWithRetry<'a> {
     url: &'a str,
-    body: &'a [u8],
+    body: &'a String,
     retries: u32,
     wait_time: u32
 }
