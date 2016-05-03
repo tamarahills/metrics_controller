@@ -14,9 +14,8 @@ extern crate lazy_static;
 
 pub mod controller;
 pub use controller::MetricsController;
-mod sysinfo;
 mod logger;
 mod metrics_worker;
 mod config;
-mod hist;
+mod events;
 mod transmitter;

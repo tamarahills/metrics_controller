@@ -26,33 +26,19 @@ pub struct CrashPingMetaData {
 }
 
 fn main() {
-    let controller = MetricsController::new(true,
+    MetricsController::new(
         "foxbox".to_string(),
         "1.0".to_string(),
         "default".to_string(),
         "20160305".to_string(),
         "rust".to_string(),
         "en-us".to_string(),
+        "linux".to_string(),
+        "1.2.3.".to_string(),
         "raspberry-pi".to_string(),
         "arm".to_string());
 
 
-    // Format some JSON for the metaData portion of the crash ping.  This is
-    // just an example.  This section is completely dependent on what the
-    // train/project deems as important in the event of a crash.
-    let meta_data = CrashPingMetaData {
-        available_page_file: 3645128704,
-        available_physical_memory: 931540992,
-        available_virtual_memory: 1509974016,
-        seconds_since_last_crash: 628343,
-        system_memory_use_percentage: 71,
-        total_page_file: 6947229696,
-        total_physical_memory: 3278979072,
-        total_virtual_memory: 2147352576
-    };
-    let serialized = serde_json::to_string(&meta_data).unwrap();
-
-    controller.send_crash_ping(serialized);
     // This sleep is necessary so the main thread does not exit.
     thread::sleep(std::time::Duration::from_secs(30));
 }
