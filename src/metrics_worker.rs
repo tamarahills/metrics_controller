@@ -3,14 +3,13 @@ extern crate time;
 extern crate timer;
 extern crate serde_json;
 
-use controller::AppInfo;
 use self::serde_json::Value;
 use config::Config;
-use hist::Histograms;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
 use std::io::prelude::*;
+use events::Events;
 use std::sync::{Arc, Mutex};
 #[allow(unused_imports)]
 use std::sync::mpsc::channel;
@@ -18,6 +17,9 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::thread::JoinHandle;
+#[allow(unused_imports)] // This will go away with next commit.
+use transmitter::Transmitter;
+
 
 #[allow(non_upper_case_globals)]
 const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
@@ -131,14 +133,12 @@ pub struct MetricsWorker {
     metrics_send: MetricsSender,
     #[allow(dead_code)]
     join_handle: Option<JoinHandle<()>>,
-    #[allow(dead_code)]
-    app_info: AppInfo
 }
 
 impl MetricsWorker {
-    pub fn new(hist_mutex: Arc<Mutex<Histograms>>, app_info: AppInfo) -> MetricsWorker {
+    pub fn new(event_mutex: Arc<Mutex<Events>>) -> MetricsWorker {
         let (ms, receiver, sender) = MetricsSender::new();
-        let histo = hist_mutex.clone();
+        let event = event_mutex.clone();
         MetricsWorker {
             metrics_send: ms,
             join_handle: Some(thread::spawn(move || {
@@ -154,12 +154,17 @@ impl MetricsWorker {
                             logger().log(LogLevelFilter::Debug, "TimerOp::None");
                         }
                         TimerOp::Send => {
-                            let hist_data = histo.lock().unwrap();
-                            let json = hist_data.serialize_to_json();
-                            logger().log(LogLevelFilter::Debug, format!("TimerOp::Send: {}", json).as_str());
+                            let mut ev_data = event.lock().unwrap();
+                            if !ev_data.is_empty() {
+                                Transmitter::new().transmit(ev_data.get_events_as_body());
+                            }
                         }
                         TimerOp::Save => {
                             logger().log(LogLevelFilter::Debug, "TimerOp::Save");
+                            let mut ev_data = event.lock().unwrap();
+                            if ev_data.is_time_to_send() {
+                                Transmitter::new().transmit(ev_data.get_events_as_body());
+                            }
                         }
                     }
                     let dur: i64 = mt.get_timer_interval();
@@ -191,8 +196,7 @@ impl MetricsWorker {
                         Err(err) => {println!("error: {}", err);}
                     }
                 }
-            })),
-            app_info: app_info
+            }))
         }
     }
 
@@ -318,23 +322,23 @@ describe! metrics_timer {
 describe! metrics_worker {
     before_each {
         #[allow(unused_imports)]
-        use controller::AppInfo;
-        use hist::Histograms;
         use std::sync::{Arc, Mutex};
+        use controller::EventInfo;
+        use events::Events;
 
-    let app_info = AppInfo {
-        locale: "en-us".to_string(),
-        os: "linux".to_string(),
-        os_version: "1.2.3.".to_string(),
-        device: "raspberry-pi".to_string(),
-        arch: "rust".to_string(),
-        app_name: "app".to_string(),
-        app_version: "1.0".to_string(),
-        app_update_channel: "default".to_string(),
-        app_build_id: "20160305".to_string(),
-        app_platform: "arm".to_string()
-    };
-        let mut mw = MetricsWorker::new(Arc::new(Mutex::new(Histograms::new())), app_info);
+        let event_info = EventInfo {
+            locale: "en-us".to_string(),
+            os: "linux".to_string(),
+            os_version: "1.2.3.".to_string(),
+            device: "raspberry-pi".to_string(),
+            arch: "rust".to_string(),
+            app_name: "app".to_string(),
+            app_version: "1.0".to_string(),
+            app_update_channel: "default".to_string(),
+            app_build_id: "20160305".to_string(),
+            app_platform: "arm".to_string()
+        };
+        let mut mw = MetricsWorker::new(Arc::new(Mutex::new(Events::new(event_info))));
     }
 
     it "should gracefully exit when quit is sent" {

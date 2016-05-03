@@ -1,12 +1,9 @@
 extern crate hyper;
 extern crate retry;
-extern crate uuid;
 
-use controller::AppInfo;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
-use self::uuid::Uuid;
 
 // hyper Error uses this trait, necessary when using Error methods,
 // e.g., 'description'
@@ -14,82 +11,40 @@ use std::error::Error as StdError;
 
 use self::hyper::status::StatusCode;
 
-const TELEMETRY_SERVER_URL: &'static str = "https://incoming.telemetry.mozilla.org/submit/telemetry/";
+const METRICS_SERVER_URL: &'static str = "https://www.google-analytics.com/collect";
+const RETRY_MAX: u32 = 10;
+const RETRY_WAIT: u32 = 500;
 
 // Shortcut to MetricsLoggerFactory function that gets the logger instance.
 #[allow(non_upper_case_globals)]
 const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
 
-// TODO don't allow dead code when 'Metric' is used
-#[allow(dead_code)]
-pub enum PingType {
-    Crash,
-    Metric
-}
-
 pub struct Transmitter {
-    telemetry_server_url: String,
-    doc_id: String,
-    app_info: AppInfo
+    metrics_server_url: String
 }
 
 impl Transmitter {
-    pub fn new(app_info: AppInfo) -> Transmitter {
+    pub fn new() -> Transmitter {
+        logger().log(LogLevelFilter::Info, "Creating Transmitter");
         Transmitter {
-            telemetry_server_url: TELEMETRY_SERVER_URL.to_string(),
-            doc_id: Uuid::new_v4().to_simple_string(),
-            app_info: app_info
+            metrics_server_url: METRICS_SERVER_URL.to_string()
         }
     }
 
-    pub fn transmit(&self,
-                    ping_type: PingType,
-                    body: String,
-                    retries: u32,
-                    wait_time: u32) -> bool {
+    pub fn transmit(&self, body: String) -> bool {
+        //TODO: perhaps make the retries configurable.
 
-        let full_url = self.build_url(ping_type);
-
-        // 'mut' is necessary to avoid the following compiler error on
-        // 'sender.send()' below:
-        // "closure cannot assign to immutable local variable `sender`"
         let mut sender = SendWithRetry {
-          url: &full_url,
+          url: &self.metrics_server_url,
           body: &body,
-          retries: retries,
-          wait_time: wait_time
+          retries: RETRY_MAX,
+          wait_time: RETRY_WAIT
         };
 
         // Rust note: Even though 'sender' is declared as mutable, it
         // needs to be explicitly passed as mutable otherwise it will
         // be considered immutable.
         self.send(&mut sender)
-    }
-
-    // This helper function can be used to build the submission URL for
-    // any of the telemetry server URLs.  The ping_type is one of:
-    // CD_CRASH_TYPE or CD_METRICS_TYPE.
-    // To build to submission URL, data in the following format is appended
-    // to the base url:
-    //     docId/pingType/appName/appVersion/appUpdateChannel/appBuildID
-    //
-    fn build_url(&self, ping_type: PingType) -> String {
-        let ping_type = match ping_type  {
-           PingType::Crash => "/cd-crash/",
-           PingType::Metric => "/cd-metric/"
-        };
-
-        let mut full_url = self.telemetry_server_url.clone();
-        full_url.push_str(&self.doc_id);
-        full_url.push_str(ping_type);
-        full_url.push_str(&self.app_info.app_name);
-        full_url.push_str(&"/".to_string());
-        full_url.push_str(&self.app_info.app_version);
-        full_url.push_str(&"/".to_string());
-        full_url.push_str(&self.app_info.app_update_channel);
-        full_url.push_str(&"/".to_string());
-        full_url.push_str(&self.app_info.app_build_id);
-        full_url
     }
 
     fn send<T: CanRetry>(&self, sender: &mut T) -> bool {
@@ -129,12 +84,7 @@ impl Transmitter {
             }
         }
     }
-
-#[cfg(test)]
-    pub fn set_telemetry_server_url(&mut self, url: String) {
-        self.telemetry_server_url = url;
-    }
-} 
+}
 
 // This trait is used to abstract sending data to the server.
 // There are two implementations of this trait:
@@ -228,34 +178,9 @@ impl CanRetry for MockSendWithRetry {
 // Create a Transmitter with predefined values for unit testing.
 #[cfg(test)]
 fn create_mock_transmitter() -> Transmitter {
-    let app_info = AppInfo {
-        locale: "en-us".to_string(),
-        os: "linux".to_string(),
-        os_version: "1.2.3.".to_string(),
-        device: "raspberry-pi".to_string(),
-        arch: "rust".to_string(),
-        app_name: "app".to_string(),
-        app_version: "1.0".to_string(),
-        app_update_channel: "default".to_string(),
-        app_build_id: "20160305".to_string(),
-        app_platform: "arm".to_string()
-    };
-
-    Transmitter::new(app_info)
+    Transmitter::new()
 }
 
-#[test]
-fn test_build_url() {
-    let mut mock_transmitter = create_mock_transmitter();
-
-    // Set the doc id as this is generated randomly by the constructor.
-    mock_transmitter.doc_id = "1234".to_string();
-    let telemetry_server_url = "https://incoming.telemetry.mozilla.org/submit/telemetry/".to_string();
-    let mut expected_full_url = telemetry_server_url.clone();
-    expected_full_url.push_str("1234/cd-crash/app/1.0/default/20160305");
-    let full_url: String = mock_transmitter.build_url(PingType::Crash);
-    assert_eq!(full_url, expected_full_url);
-}
 
 #[test]
 fn test_send_success() {
@@ -305,4 +230,3 @@ fn test_send_retry_failure() {
 
     assert_eq!(bret, false);
 }
-
