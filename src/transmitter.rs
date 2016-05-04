@@ -11,7 +11,7 @@ use std::error::Error as StdError;
 
 use self::hyper::status::StatusCode;
 
-const METRICS_SERVER_URL: &'static str = "https://www.google-analytics.com/collect";
+const METRICS_SERVER_URL: &'static str = "https://www.google-analytics.com/batch";
 const RETRY_MAX: u32 = 10;
 const RETRY_WAIT: u32 = 500;
 

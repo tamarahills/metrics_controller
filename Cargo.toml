@@ -22,3 +22,7 @@ telemetry = "0.1.1"
 
 [dev-dependencies]
 stainless = "*"
+
+[dependencies.url]
+git = "https://github.com/servo/rust-url"
+features = ["query_encoding"]
