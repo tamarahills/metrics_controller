@@ -140,6 +140,16 @@ impl MetricsController {
         self.mw.quit();
     }
 
+    /// Constructs a new event which is batched and sent to the Google Analytics
+    /// server.
+    /// Params:
+    ///     event_category - Category of the event.
+    ///     event_action - action that the user took or what happened to trigger.
+    ///     event_label - Description of what the metric is.
+    ///     event_value - Numeric value of the metric.
+    /// Returns:
+    ///     true - Was able to insert.
+    ///     false - Error inserting.
     pub fn record_event(&mut self,
                         event_category: &str,
                         event_action: &str,
