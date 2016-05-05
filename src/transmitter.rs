@@ -5,6 +5,14 @@ use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
 
+use std::error::Error;
+#[cfg(feature = "integration")]
+use std::fs::File;
+#[cfg(feature = "integration")]
+use std::path::Path;
+#[cfg(feature = "integration")]
+use std::io::Write;
+
 // hyper Error uses this trait, necessary when using Error methods,
 // e.g., 'description'
 use std::error::Error as StdError;
@@ -113,6 +121,7 @@ impl<'a> CanRetry for SendWithRetry<'a> {
     fn get_retries(&self) -> u32 { self.retries }
     fn get_wait_time(&self) -> u32 { self.wait_time }
     fn send(&mut self) -> Result<StatusCode, String> {
+        send_helper(self.body);
         let client = hyper::Client::new();
         match client.post(self.url).body(self.body).send() {
             Ok(response) => return Ok(response.status),
@@ -121,12 +130,33 @@ impl<'a> CanRetry for SendWithRetry<'a> {
     }
 }
 
+#[allow(unused_variables)]
+#[cfg(not(feature = "integration"))]
+fn send_helper<'a>(body: &'a String) {
+}
+
+#[cfg(feature = "integration")]
+fn send_helper<'a>(body: &'a String) {
+    let path = Path::new("integration1.dat");
+    let display = path.display();
+    let mut file = match File::create(&path) {
+        Err(why) => panic!("couldn't create {}: {}", display,
+                Error::description(&why)),
+        Ok(file) => file
+    };
+
+    logger().log(LogLevelFilter::Info, format!("Writing {} to {}", body, display).as_str());
+    let _ = file.write(body.as_bytes());
+}
+
+#[allow(dead_code)]
 #[cfg(test)]
 enum SendResult {
     Success,
     Failure
 }
 
+#[allow(dead_code)]
 #[cfg(test)]
 struct MockSendWithRetry {
     retries: u32,
@@ -176,12 +206,14 @@ impl CanRetry for MockSendWithRetry {
 }
 
 // Create a Transmitter with predefined values for unit testing.
+#[cfg(not(feature = "integration"))]
 #[cfg(test)]
 fn create_mock_transmitter() -> Transmitter {
     Transmitter::new()
 }
 
 
+#[cfg(not(feature = "integration"))]
 #[test]
 fn test_send_success() {
     let mut mock_sender = MockSendWithRetry {
@@ -198,6 +230,7 @@ fn test_send_success() {
     assert_eq!(mock_sender.succeeded_on_attempt, mock_sender.succeed_on_attempt);
 }
 
+#[cfg(not(feature = "integration"))]
 #[test]
 fn test_send_retry_success() {
     let mut mock_sender = MockSendWithRetry {
@@ -215,6 +248,7 @@ fn test_send_retry_success() {
     assert_eq!(mock_sender.succeeded_on_attempt, mock_sender.succeed_on_attempt);
 }
 
+#[cfg(not(feature = "integration"))]
 #[test]
 fn test_send_retry_failure() {
     let mut mock_sender = MockSendWithRetry {

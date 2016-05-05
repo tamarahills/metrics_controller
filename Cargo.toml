@@ -26,3 +26,6 @@ stainless = "*"
 [dependencies.url]
 git = "https://github.com/servo/rust-url"
 features = ["query_encoding"]
+
+[features]
+integration = []
