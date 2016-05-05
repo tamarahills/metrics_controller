@@ -154,6 +154,7 @@ impl MetricsWorker {
                             logger().log(LogLevelFilter::Debug, "TimerOp::None");
                         }
                         TimerOp::Send => {
+                            logger().log(LogLevelFilter::Debug, "TimerOp::Send");
                             let mut ev_data = event.lock().unwrap();
                             if !ev_data.is_empty() {
                                 Transmitter::new().transmit(ev_data.get_events_as_body());

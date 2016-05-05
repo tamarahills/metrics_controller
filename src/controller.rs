@@ -61,9 +61,8 @@ impl EventInfo {
 /// The metrics controller for the CD Metrics Library
 pub struct MetricsController {
     #[allow(dead_code)] // Issue #33 -- Will go away with subsequent commits.
-    ev: Arc<Mutex<Events>>,
+    events: Arc<Mutex<Events>>,
     mw: MetricsWorker
-
 }
 
 impl MetricsController {
@@ -98,19 +97,19 @@ impl MetricsController {
         logger().log(LogLevelFilter::Info, "Creating Controller");
         let event_info = EventInfo::new(
                     locale,
+                    os,
+                    os_version,
                     device,
                     app_name,
                     app_version,
                     app_update_channel,
                     app_build_id,
                     app_platform,
-                    arch,
-                    os,
-                    os_version);
+                    arch);
         let events = Arc::new(Mutex::new(Events::new(event_info)));
 
         MetricsController {
-            ev: events.clone(),
+            events: events.clone(),
             mw: MetricsWorker::new(events)
         }
     }
@@ -140,10 +139,22 @@ impl MetricsController {
         // from memory and delete the ones on disk.
         self.mw.quit();
     }
+
+    pub fn record_event(&mut self,
+                        event_category: &str,
+                        event_action: &str,
+                        event_label: &str,
+                        event_value: u64) -> bool {
+        let mut events = self.events.lock().unwrap();
+        events.insert_event(event_category, event_action, event_label, event_value)
+    }
 }
 
 // Create a MetricsController with predefined values
 // for unit testing.
+/*
+ * TODO This function is commented out because it is not being used.
+ *      Uncomment when there are unit tests that need it.
 #[cfg(test)]
 fn create_metrics_controller() -> MetricsController {
     MetricsController::new(
@@ -159,3 +170,4 @@ fn create_metrics_controller() -> MetricsController {
         "arm".to_string()
     )
 }
+*/

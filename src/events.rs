@@ -1,12 +1,19 @@
 extern crate uuid;
 extern crate url;
 
+use log::LogLevelFilter;
+use logger::MetricsLoggerFactory;
+use logger::MetricsLogger;
+
 use std::collections::VecDeque;
 use controller::EventInfo;
 use self::uuid::Uuid;
 use url::percent_encoding;
 use url::percent_encoding::SIMPLE_ENCODE_SET;
 
+#[allow(non_upper_case_globals)]
+// Shortcut to MetricsLoggerFactory function that gets the logger instance.
+const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
 
 const MAX_EVENT_SIZE: usize = 20;
 
@@ -58,7 +65,9 @@ impl Events {
                                     self.encode_value(self.event_info.arch.clone()),
                                     self.encode_value(self.event_info.app_platform.clone()),
                                     self.encode_value(self.event_info.app_build_id.clone()));
+        logger().log(LogLevelFilter::Debug, format!("Inserted event: {}", event_string).as_str());
         self.event_storage.push_back(event_string);
+
         true
     }
 
@@ -103,7 +112,6 @@ impl Events {
                     body.push_str("%0A");
                 },
                 None => {
-                    println!("in none");
                     break;
                 },
             }
