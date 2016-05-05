@@ -257,6 +257,7 @@ impl ThreadTest {
 }
 
 
+#[cfg(not(feature = "integration"))]
 #[cfg(test)]
 describe! metrics_timer {
     before_each {
@@ -319,6 +320,7 @@ describe! metrics_timer {
     }
 }
 
+#[cfg(not(feature = "integration"))]
 #[cfg(test)]
 describe! metrics_worker {
     before_each {

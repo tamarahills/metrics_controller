@@ -107,6 +107,7 @@ impl Config {
 }
 
 
+#[cfg(not(feature = "integration"))]
 #[test]
 #[should_panic]
 fn test_init_config_file_not_found() {
@@ -115,6 +116,7 @@ fn test_init_config_file_not_found() {
 }
 
 
+#[cfg(not(feature = "integration"))]
 #[cfg(test)]
 describe! config_file_found {
     it "should open the config file when it exists" {
@@ -123,6 +125,7 @@ describe! config_file_found {
     }
 }
 
+#[cfg(not(feature = "integration"))]
 #[cfg(test)]
 describe! parsing_file {
     before_each {
@@ -131,7 +134,7 @@ describe! parsing_file {
         #[allow(unused_imports)]
         use config::serde_json::Value;
 
-        let s: String = "{\"sendInterval\": 30, \"saveInterval\": 2, \
+        let s: String = "{\"sendInterval\": 10, \"saveInterval\": 2, \
         	\"startTime\": 0, \"savePath\": \"testSavePath\", \
         	\"logPath\": \"/Volumes/development/metrics_controller/log\"}".to_string();
         let mut cfg = Config::new();
@@ -159,7 +162,7 @@ describe! parsing_file {
     it "get should return a value for an existing key" {
         let val: Option<Value> = cfg.get("sendInterval");
         match val {
-            Some(v) => assert_eq!(v, Value::U64(30)),
+            Some(v) => assert_eq!(v, Value::U64(10)),
             None => {
                 assert!(false);
             },

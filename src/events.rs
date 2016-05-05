@@ -121,6 +121,7 @@ impl Events {
     }
 }
 
+#[cfg(not(feature = "integration"))]
 #[cfg(test)]
 describe! events_functionality {
     before_each {
