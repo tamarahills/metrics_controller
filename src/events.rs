@@ -1,13 +1,19 @@
+extern crate serde_json;
 extern crate uuid;
 extern crate url;
 
+#[allow(unused_imports)]
+use config::Config;
+use controller::EventInfo;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
 
 use std::collections::VecDeque;
-use controller::EventInfo;
+#[allow(unused_imports)]
 use self::uuid::Uuid;
+#[allow(unused_imports)]
+use self::serde_json::Value;
 use url::percent_encoding;
 use url::percent_encoding::SIMPLE_ENCODE_SET;
 
@@ -16,6 +22,8 @@ use url::percent_encoding::SIMPLE_ENCODE_SET;
 const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
 
 const MAX_EVENT_SIZE: usize = 20;
+#[allow(dead_code)]
+const KEY_CID:&'static str = "cid";
 
 define_encode_set! {
     /// This encode set is used in the URL parser for query strings.
@@ -33,20 +41,10 @@ impl Events {
         Events {
             event_storage: VecDeque::with_capacity(20),
             event_info: event_info,
-            client_id: Uuid::new_v4().to_hyphenated_string()
+            client_id: get_client_id()
         }
     }
 
-    /// Constructs a new event URL and adds it to the storage which is
-    /// a VecDeque.
-    /// Params:
-    ///     event_category - Category of the event.
-    ///     event_action - action that the user took or what happened to trigger.
-    ///     event_label - Description of what the metric is.
-    ///     event_value - Numeric value of the metric.
-    /// Returns:
-    ///     true - Was able to insert.
-    ///     false - Error inserting.
     #[allow(dead_code)]
     pub fn insert_event(&mut self, event_category: &str, event_action: &str, event_label: &str, event_value: u64) -> bool  {
         let event_string = format!("v=1&t=event&tid=UA-77033033-1&cid={0}&ec={1}&ea={2}&el={3}&ev={4}&an={5}&av={6}&ul={7}\
@@ -119,6 +117,29 @@ impl Events {
         }
         body
     }
+}
+
+#[cfg(not(test))]
+fn get_client_id() -> String {
+    let mut cid = String::new();
+    let mut cfg = Config::new();
+    if cfg.init("cid.dat") {
+        let val: Option<Value> = cfg.get(KEY_CID);
+        match val {
+            Some(_) => cid.push_str(&cfg.get_string(KEY_CID).to_string()),
+            None => panic!("Error: no cid written")
+        }
+    } else {
+        cid.push_str(&Uuid::new_v4().to_hyphenated_string().to_string());
+        let json = format!("{{\"{0}\":\"{1}\"}}", KEY_CID, cid);
+        cfg.create_and_write_json("cid.dat", &json);
+    }
+    cid
+}
+
+#[cfg(test)]
+fn get_client_id() -> String {
+    "9eccb690-93aa-4513-835a-9a4f0f0e2a71".to_string()
 }
 
 #[cfg(not(feature = "integration"))]

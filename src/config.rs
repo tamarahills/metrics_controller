@@ -30,28 +30,46 @@ impl Config {
             parsed_json: None,
         }
     }
+    #[allow(dead_code)]
+    pub fn create_and_write_json(&mut self, file_name: &str, json: &str)  {
+        logger().log(LogLevelFilter::Debug, format!("file: {}", file_name).as_str());
+        let f = File::create(file_name);
+        match f {
+            Ok(mut t) => {
+                let _ = t.write(json.as_bytes());
+            },
+            Err(e) => panic!("cannot open file: {}", e),
+        };
+    }
 
-    pub fn init(&mut self, file_name: &str) {
+
+    pub fn init(&mut self, file_name: &str) -> bool {
         //TODO:  Need to make this look at env variable or take a path to the file.
         logger().log(LogLevelFilter::Debug, format!("config file: {}", file_name).as_str());
         let path = Path::new(file_name);
         let display = path.display();
         // Open the path in read-only mode.
         let mut file = match File::open(&path) {
-            Err(why) => panic!("couldn't open {}: {}", display,
-                                                       Error::description(&why)),
+            Err(why) => {
+                logger().log(LogLevelFilter::Error, format!("couldn't open {}: {}", display,
+                                                       Error::description(&why)).as_str());
+                return false;
+            }
             Ok(file) => file,
         };
 
         // Read the file contents into a string, returns `io::Result<usize>`
         let mut s = String::new();
         match file.read_to_string(&mut s) {
-            Err(why) => panic!("couldn't read {}: {}", display,
-                                                       Error::description(&why)),
+            Err(why) => {
+                logger().log(LogLevelFilter::Error, format!("Error: {}", why).as_str());
+                return false;
+            }
             Ok(_) => logger().log(LogLevelFilter::Debug,
                 format!("file contains: {}", s).as_str()),
         }
         self.parse_json(s);
+        true
     }
 
     fn parse_json(&mut self, json_string: String) {
@@ -108,20 +126,18 @@ impl Config {
 
 
 #[cfg(not(feature = "integration"))]
-#[test]
-#[should_panic]
-fn test_init_config_file_not_found() {
-    let mut cfg = Config::new();
-    cfg.init("test.json");
-}
-
-
-#[cfg(not(feature = "integration"))]
 #[cfg(test)]
 describe! config_file_found {
     it "should open the config file when it exists" {
         let mut cfg = Config::new();
-        cfg.init("metricsconfig.json");
+        let found = cfg.init("metricsconfig.json");
+        assert_eq!(found, true);
+    }
+
+    it "should return false if config file not found" {
+        let mut cfg = Config::new();
+        let found = cfg.init("test.json");
+        assert_eq!(found, false);
     }
 }
 

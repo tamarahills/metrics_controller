@@ -19,6 +19,9 @@ pub mod controller;
 pub use controller::MetricsController;
 mod logger;
 mod metrics_worker;
+#[cfg(not(feature = "integration"))]
 mod config;
+#[cfg(feature = "integration")]
+pub mod config;
 mod events;
 mod transmitter;
