@@ -1,6 +1,7 @@
 # metrics_controller
 
-* |cargo test| -- builds the library and the main target for testing/exercising
+* |cargo test| -- builds the library and the main target for testing, runs unit tests
+* |cargo test --features integration| -- builds the library and the main target for testing, runs integration tests
 * |cargo clean| -- cleans out the target
 * |cargo build| -- builds just the library
 * |cargo doc| -- creates 'rustdoc' documentation
