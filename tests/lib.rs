@@ -81,30 +81,69 @@ fn test_thread_timer() {
 }
 
 #[cfg(feature = "integration")]
+struct MockEventInfo<'a> {
+    pub app_name: &'a str,
+    pub app_version: &'a str,
+    pub app_update_channel: &'a str,
+    pub app_build_id: &'a str,
+    pub app_platform: &'a str,
+    pub locale: &'a str,
+    pub device: &'a str,
+    pub arch: &'a str,
+    pub os: &'a str,
+    pub os_version: &'a str
+}
+
+#[cfg(feature = "integration")]
+fn get_event_info<'a>() -> MockEventInfo<'a> {
+    let ei = MockEventInfo {
+        app_name           : "foxbox",
+        app_version        : "1.0",
+        app_update_channel : "default",
+        app_build_id       : "20160305",
+        app_platform       : "rust",
+        locale             : "en-us",
+        device             : "raspberry-pi",
+        arch               : "arm",
+        os                 : "linux",
+        os_version         : "1.2.3.",
+    };
+
+    ei
+}
+
+#[cfg(feature = "integration")]
 #[test]
 fn test_cid_file_creation_and_proper_reuse() {
     // make sure we are starting with no files created.
     delete_file("integration1.dat");
     delete_file("cid.dat");
 
-    let mut metrics_controller = MetricsController::new(
-        "foxbox".to_string(), "1.0".to_string(), "default".to_string(), "20160305".to_string(),
-        "rust".to_string(), "en-us".to_string(), "raspberry-pi".to_string(), "arm".to_string(),
-        "linux".to_string(), "1.2.3.".to_string());
+    let event_category     = "event category";
+    let event_action       = "event action";
+    let event_label        = "event label";
+    let event_value        = 999999;
+    let ei = get_event_info();
 
-    metrics_controller.record_event("event category", "event action", "event label", 999999);
+    let mut metrics_controller = MetricsController::new(
+        ei.app_name.to_string(), ei.app_version.to_string(), ei.app_update_channel.to_string(),
+        ei.app_build_id.to_string(), ei.app_platform.to_string(), ei.locale.to_string(),
+        ei.device.to_string(), ei.arch.to_string(), ei.os.to_string(), ei.os_version.to_string());
+
+    metrics_controller.record_event(event_category, event_action, event_label, event_value);
     let cid1 = read_client_id();
 
     // This sleep is necessary there is no file system interactions.
     thread::sleep(std::time::Duration::from_secs(3));
     {
         let mut metrics_controller2 = MetricsController::new(
-            "foxbox".to_string(), "1.0".to_string(), "default".to_string(), "20160305".to_string(),
-            "rust".to_string(), "en-us".to_string(), "raspberry-pi".to_string(), "arm".to_string(),
-            "linux".to_string(), "1.2.3.".to_string());
+            ei.app_name.to_string(), ei.app_version.to_string(), ei.app_update_channel.to_string(),
+            ei.app_build_id.to_string(), ei.app_platform.to_string(), ei.locale.to_string(),
+            ei.device.to_string(), ei.arch.to_string(), ei.os.to_string(), ei.os_version.to_string());
 
-        metrics_controller2.record_event("event category", "event action", "event label", 999999);
+        metrics_controller2.record_event(event_category, event_action, event_label, event_value);
         let cid2 = read_client_id();
+
         // The same client id should be used for both metrics controllers on the same device.
         assert_eq!(cid1, cid2);
         drop(metrics_controller2);
@@ -113,25 +152,27 @@ fn test_cid_file_creation_and_proper_reuse() {
     // This sleep is necessary so the main thread does not exit.
     thread::sleep(std::time::Duration::from_secs(20));
 
-    let expected_body = format!("v=1&t=event&tid=UA-77033033-1&cid={0}\
-                         &ec=event%20category&ea=event%20action&el=event%20label&ev=999999\
-                         &an=foxbox&av=1.0&ul=en-us&cd1=linux&cd2=1.2.3.&cd3=raspberry-pi\
-                         &cd4=arm&cd5=rust&cd6=20160305%0A", cid1);
+    let expected_body = format!(
+        "v=1&t=event&tid=UA-77033033-1&cid={0}&ec=event%20category&ea=event%20action&el=event%20label&ev={1}\
+         &an={2}&av={3}&ul={4}&cd1={5}&cd2={6}&cd3={7}&cd4={8}&cd5={9}&cd6={10}%0A",
+         cid1, event_value, ei.app_name, ei.app_version, ei.locale, ei.os, ei.os_version,
+         ei.device, ei.arch, ei.app_platform, ei.app_build_id
+    );
 
     let path = Path::new("integration1.dat");
     let display = path.display();
     // Open the path in read-only mode.
     let mut file = match File::open(&path) {
-        Err(why) => panic!("couldn't open {}: {}", display,
-            Error::description(&why)),
+        Err(why) => panic!("couldn't open {}: {}",
+            display, Error::description(&why)),
         Ok(file) => file
     };
 
     // Read the file contents into a string, returns `io::Result<usize>`
     let mut s = String::new();
     match file.read_to_string(&mut s) {
-        Err(why) => panic!("couldn't read {}: {}", display,
-                                                       Error::description(&why)),
+        Err(why) => panic!("couldn't read {}: {}",
+            display, Error::description(&why)),
         Ok(_) => (),
     }
 
@@ -152,23 +193,31 @@ fn test_max_body_size() {
     delete_file("integration1.dat");
     delete_file("cid.dat");
 
+    let event_category     = "event category";
+    let event_action       = "event action";
+    let event_label        = "event label";
+    let event_value        = 999999;
+    let ei = get_event_info();
+
     let mut metrics_controller = MetricsController::new(
-        "foxbox".to_string(), "1.0".to_string(), "default".to_string(), "20160305".to_string(),
-        "rust".to_string(), "en-us".to_string(), "raspberry-pi".to_string(), "arm".to_string(),
-        "linux".to_string(), "1.2.3.".to_string());
+        ei.app_name.to_string(), ei.app_version.to_string(), ei.app_update_channel.to_string(),
+        ei.app_build_id.to_string(), ei.app_platform.to_string(), ei.locale.to_string(),
+        ei.device.to_string(), ei.arch.to_string(), ei.os.to_string(), ei.os_version.to_string());
 
     for _ in 0.. 20 {
-        metrics_controller.record_event("event category", "event action", "event label", 999999);
+        metrics_controller.record_event(event_category, event_action, event_label, event_value);
     }
     let cid1 = read_client_id();
 
     // This sleep is necessary so the main thread does not exit.
     thread::sleep(std::time::Duration::from_secs(20));
 
-    let expected_body = format!("v=1&t=event&tid=UA-77033033-1&cid={0}\
-                         &ec=event%20category&ea=event%20action&el=event%20label&ev=999999\
-                         &an=foxbox&av=1.0&ul=en-us&cd1=linux&cd2=1.2.3.&cd3=raspberry-pi\
-                         &cd4=arm&cd5=rust&cd6=20160305%0A", cid1);
+    let expected_body = format!(
+        "v=1&t=event&tid=UA-77033033-1&cid={0}&ec=event%20category&ea=event%20action&el=event%20label&ev={1}\
+         &an={2}&av={3}&ul={4}&cd1={5}&cd2={6}&cd3={7}&cd4={8}&cd5={9}&cd6={10}%0A",
+         cid1, event_value, ei.app_name, ei.app_version, ei.locale, ei.os, ei.os_version,
+         ei.device, ei.arch, ei.app_platform, ei.app_build_id
+    );
     let mut max_body = String::new();
     for _ in 0..20 {
         max_body.push_str(&expected_body.to_string());

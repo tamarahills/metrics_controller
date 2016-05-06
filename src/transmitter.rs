@@ -121,6 +121,7 @@ impl<'a> CanRetry for SendWithRetry<'a> {
     fn get_retries(&self) -> u32 { self.retries }
     fn get_wait_time(&self) -> u32 { self.wait_time }
     fn send(&mut self) -> Result<StatusCode, String> {
+        logger().log(LogLevelFilter::Info, format!("Sending {} to {}", self.body, self.url).as_str());
         send_helper(self.body);
         let client = hyper::Client::new();
         match client.post(self.url).body(self.body).send() {
@@ -145,7 +146,7 @@ fn send_helper<'a>(body: &'a String) {
         Ok(file) => file
     };
 
-    logger().log(LogLevelFilter::Info, format!("Writing {} to {}", body, display).as_str());
+    logger().log(LogLevelFilter::Debug, format!("Writing {} to {}", body, display).as_str());
     let _ = file.write(body.as_bytes());
 }
 
