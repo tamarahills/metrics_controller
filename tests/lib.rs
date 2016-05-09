@@ -6,7 +6,14 @@ extern crate chrono;
 extern crate metrics_controller;
 extern crate serde_json;
 extern crate timer;
+extern crate uuid;
+extern crate time;
+extern crate hyper;
 
+#[allow(unused_imports)]
+use std::env;
+#[allow(unused_imports)]
+use hyper::Client;
 #[allow(unused_imports)]
 use metrics_controller::MetricsController;
 #[allow(unused_imports)]
@@ -25,6 +32,8 @@ use std::thread;
 use metrics_controller::config::Config;
 #[allow(unused_imports)]
 use self::serde_json::Value;
+#[allow(unused_imports)]
+use self::uuid::Uuid;
 
 #[allow(dead_code)]
 const KEY_CID:&'static str = "cid";
@@ -183,9 +192,8 @@ fn test_cid_file_creation_and_proper_reuse() {
     delete_file("cid.dat");
 }
 
-// we can remove the ignore if we want to run the test tasks in parallel.
-// to run the integration tests in serial, run |RUST_TEST_THREADS=1 cargo test --features integration|
-#[ignore]
+// If this test fails, make sure to run integration tests in serial,
+// run |RUST_TEST_THREADS=1 cargo test --features integration|
 #[cfg(feature = "integration")]
 #[test]
 fn test_max_body_size() {
@@ -245,6 +253,107 @@ fn test_max_body_size() {
     // Clean up any side effects of the test.
     delete_file("integration1.dat");
     delete_file("cid.dat");
+}
+
+
+// This test is being ignored as it requires you to setup an environment variable
+// called GOOGLE_ACCESS_TOKEN.  The token can be obtained from the Metrics Explorer.
+#[ignore]
+#[cfg(feature = "integration")]
+#[test]
+fn test_google_analytics_received() {
+    let event_category     = "test";
+    let event_action       = "integration";
+    let event_label        = &Uuid::new_v4().to_simple_string().to_string();
+    let event_value        = 999999;
+    let ei = get_event_info();
+
+    let mut metrics_controller = MetricsController::new(
+        ei.app_name.to_string(), ei.app_version.to_string(), ei.app_update_channel.to_string(),
+        ei.app_build_id.to_string(), ei.app_platform.to_string(), ei.locale.to_string(),
+        ei.device.to_string(), ei.arch.to_string(), ei.os.to_string(), ei.os_version.to_string());
+
+    metrics_controller.record_event(event_category, event_action, event_label, event_value);
+
+    // This sleep is necessary so the main thread does not exit.
+    thread::sleep(std::time::Duration::from_secs(30));
+
+    // Read the environment variable for the Google Access Token... Obtain
+    // this from Query Explorer. It is good for an hour.
+    let access_token:String;
+    let key = "GOOGLE_ACCESS_TOKEN";
+    match env::var_os(key) {
+        Some(val) => {
+            access_token = val.to_str().unwrap().to_string();
+            println!("{}", access_token);
+        },
+        None => panic!("GOOGLE_ACCESS_TOKEN is not defined in the environment. \
+                        Retrieve this value from the query explorer")
+    }
+
+    // Get the time so we can filter by it.
+    let ts = time::now();
+    let filter_time = format!("{0:4}-{1:02}-{2:02}", ts.tm_year + 1900, ts.tm_mon + 1, ts.tm_mday);
+
+    let report_url = format!("https://www.googleapis.com/analytics/v3/data/ga?ids=ga%3A121095747&\
+                             start-date={0}&end-date={1}&metrics=ga%3AeventValue&\
+                             dimensions=ga%3AeventCategory%2Cga%3AeventAction%2Cga%3AeventLabel&\
+                             filters=ga%3AeventLabel%3D%3D{2}&access_token={3}",
+                             filter_time, filter_time, event_label, access_token);
+
+    println!("REPORT URL: {}", report_url);
+
+    // This is set to success only when the eventValue matches what we sent above.
+    let mut success: bool = false;
+
+    // Loop 10 times to give the data time to be queryable by the reporting API.
+    // As an observation it seems to take about 2.5 minutes for the data to arrive.
+    for _ in 0 .. 10 {
+        thread::sleep(std::time::Duration::from_secs(30));
+
+        let client = Client::new();
+        let mut res = client.get(&report_url.to_string()).send().unwrap();
+
+        if hyper::status::StatusCode::Unauthorized == res.status {
+            println!("Access Token missing or expired.  Set environment /
+                      variable GOOGLE_ACCESS_TOKEN to access token");
+        }
+
+        // Read the Response Code.
+        assert_eq!(res.status, hyper::Ok);
+
+        let mut s = String::new();
+        res.read_to_string(&mut s).unwrap();
+
+        let data: Value = serde_json::from_str(&s).unwrap();
+        let obj = data.as_object().unwrap();
+
+        let val = obj.get(&"totalsForAllResults".to_string()).unwrap().clone();
+        match val {
+            Value::Object(v) => {
+                let event_val = v.get(&"ga:eventValue".to_string()).unwrap().clone();
+                match event_val {
+                    Value::String(v) => {
+                        println!("String is: {}", v);
+                        if v == event_value.to_string() {
+                            println!("success");
+                            success = true;
+                            break;
+                        }
+                    },
+                    _ => panic!("Sth else"),
+                }
+            },
+            _ => panic!("Expected an object"),
+        }
+        println!("RESPONSE: {}", s);
+    }
+
+    // Clean up any side effects of the test.
+    delete_file("integration1.dat");
+    delete_file("cid.dat");
+
+    assert_eq!(success, true);
 }
 
 #[cfg(feature = "integration")]
