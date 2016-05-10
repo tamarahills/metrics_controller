@@ -8,7 +8,6 @@ use config::Config;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
-use std::io::prelude::*;
 use events::Events;
 use std::sync::{Arc, Mutex};
 #[allow(unused_imports)]
@@ -229,6 +228,7 @@ impl ThreadTest {
     fn write(&mut self) {
         use std::fs::File;
         use std::error::Error;
+        use std::io::prelude::*;
 
         match File::create("thread.dat") {
             Err(why) => panic!("couldn't open:{}",Error::description(&why)),
