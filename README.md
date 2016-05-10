@@ -7,7 +7,7 @@
 * |cargo doc| -- creates 'rustdoc' documentation
 
 ## Toolchain
- run |multirust override nightly-2016-04-10| to make sure you have the correct rust version.
+ run |multirust override nightly-2016-05-07| to make sure you have the correct rust version.
 
 ### Building on OSX El Capitan
 When building from a clean state on MacOS El Capitan, if you see the following error:
