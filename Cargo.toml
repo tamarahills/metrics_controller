@@ -2,19 +2,6 @@
 name = "metrics-controller"
 version = "0.1.0"
 authors = ["thills <thills@mozilla.com", "russn <russn@mozilla.com"]
-repository = "https://github.com/tamarahills/metrics_controller"
-description = "Metrics Controller is a project to collect metrics for Mozilla IOT projects."
-documentation = "https://github.com/tamarahills/metrics_controller/README.MD"
-homepage = "https://github.com/tamarahills/metrics_controller/README.MD"
-readme = "README.md"
-keywords = ["metrics"]
-license-file = "LICENSE"
-exclude = [
-  "*.dat",
-  "*.lock",
-  "js/*.js",
-  "test/*.js"
-]
 
 
 [dependencies]
@@ -31,10 +18,13 @@ sys-info = "0.4.1"
 log = "0.3"
 env_logger = "0.3.2"
 lazy_static = "0.1.15"
-url = "1.1.0"
 
 [dev-dependencies]
-stainless = "0.1.4"
+stainless = "*"
+
+[dependencies.url]
+git = "https://github.com/servo/rust-url"
+features = ["query_encoding"]
 
 [features]
 integration = []

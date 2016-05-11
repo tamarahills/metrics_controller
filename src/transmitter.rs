@@ -5,7 +5,6 @@ use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
 
-#[cfg(feature = "integration")]
 use std::error::Error;
 #[cfg(feature = "integration")]
 use std::fs::File;
@@ -16,7 +15,6 @@ use std::io::Write;
 
 // hyper Error uses this trait, necessary when using Error methods,
 // e.g., 'description'
-#[allow(unused_imports)]
 use std::error::Error as StdError;
 
 use self::hyper::status::StatusCode;
