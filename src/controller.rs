@@ -71,24 +71,24 @@ impl MetricsController {
     //        so it is being ignored for the purpose of running tests.
 
     /// Constructs a new `MetricsController`. Caller passes information
-    /// about their application and environment and also whether the controller
-    /// should be active (should be inactive, for example, if the user has
-    /// opted-out of metrics collection).
+    /// about their application and environment. This information will be associated
+    /// with the metrics data recorded by the `record_event` function.
     ///
     /// # Examples
     ///
     /// ```ignore
     /// use metrics_controller::controller::MetricsController;
     /// let mc = MetricsController::new(
-    ///     true,
     ///     "foxbox".to_string(),
     ///     "1.0".to_string(),
-    ///     "beta".to_string(),
-    ///     "20160522".to_string(),
+    ///     "nightly".to_string(),
+    ///     "20160305".to_string(),
     ///     "rust".to_string(),
     ///     "en-us".to_string(),
-    ///     "RPi2".to_string(),
-    ///     "arm".to_string());
+    ///     "raspberry-pi".to_string(),
+    ///     "arm".to_string(),
+    ///     "linux".to_string(),
+    ///     "1.2.3".to_string());
     /// ```
     pub fn new(app_name: String, app_version: String,
                app_update_channel: String, app_build_id: String,
@@ -114,6 +114,7 @@ impl MetricsController {
         }
     }
 
+    // TODO determine if we still want this function
     /// This function is called to start the metrics service.  It also starts the
     /// worker thread needed to operate the metrics service.  The worker thread
     /// is responsible for periodically: persisting the histogram data and
@@ -132,6 +133,7 @@ impl MetricsController {
         true
     }
 
+    // TODO determine if we still want this function
     /// Stops the metrics service and deletes metrics data that has been collected
     /// but not sent to the server.
     pub fn stop_collecting(&mut self) {
@@ -142,14 +144,22 @@ impl MetricsController {
 
     /// Constructs a new event which is batched and sent to the Google Analytics
     /// server.
+    ///
     /// Params:
-    ///     event_category - Category of the event.
-    ///     event_action - action that the user took or what happened to trigger.
-    ///     event_label - Description of what the metric is.
+    ///
+    ///     event_category - Category of the event. For example, "eng" or "user"
+    ///
+    ///     event_action - Action that the user took or what happened to trigger.
+    ///                    For example, "open-app"
+    ///
+    ///     event_label - Description of what the metric is. For example, "memory"
+    ///
     ///     event_value - Numeric value of the metric.
     /// Returns:
-    ///     true - Was able to insert.
-    ///     false - Error inserting.
+    ///
+    ///     true - Was able to record the event.
+    ///
+    ///     false - Error, unable to record the event.
     pub fn record_event(&mut self,
                         event_category: &str,
                         event_action: &str,
