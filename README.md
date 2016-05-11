@@ -38,3 +38,13 @@ This will enable info-level logging for the metrics library and all rust modules
 And, of course, to redirect the log messages to a file:
 
     CD_METRICS_LOG=info/CD-METRICS target/debug/examples/main 2> log
+
+## Javascript Wrapper
+  There is a Javascript wrapper called js/metrics.js that will facilitate metrics gathering for web based applications.
+
+  To invoke the integration test:
+    1.  Install chai: |npm install chai|
+    2.  Install mocha: |npm install mocha|
+    3.  Load test/metrics_test.html in a browser.  
+
+  Note that the test may take up to 3 minutes to execute as it's verifying the data was received at the server.

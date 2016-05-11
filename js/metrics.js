@@ -43,6 +43,7 @@
       this.app_platform = options.app_platform || '';
       this.arch = options.arch || '';
   }
+  exports.Metrics = Metrics;
 
  /*
   * recordEvent - record an event (send data to the server)
@@ -120,6 +121,4 @@
       xhr.ontimeout = onerror;
     };
 
-    exports.Metrics = Metrics;
-}(window));
-
+})(this);
