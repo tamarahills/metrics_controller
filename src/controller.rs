@@ -41,21 +41,6 @@ impl EventInfo {
             arch: arch
         }
     }
-
-    pub fn clone(&self) -> EventInfo {
-        EventInfo {
-            locale: self.locale.clone(),
-            os: self.os.clone(),
-            os_version: self.os_version.clone(),
-            device: self.device.clone(),
-            app_name: self.app_name.clone(),
-            app_version: self.app_version.clone(),
-            app_update_channel: self.app_update_channel.clone(),
-            app_build_id: self.app_build_id.clone(),
-            app_platform: self.app_platform.clone(),
-            arch: self.arch.clone()
-        }
-    }
 }
 
 /// The metrics controller for the CD Metrics Library
@@ -147,19 +132,19 @@ impl MetricsController {
     ///
     /// Params:
     ///
-    ///     event_category - Category of the event. For example, "eng" or "user"
+    /// *event_category* -- Category of the event. For example, &apos;eng&apos; or &apos;user&apos;
     ///
-    ///     event_action - Action that the user took or what happened to trigger.
-    ///                    For example, "open-app"
+    /// *event_action* -- Action that the user took or what happened to trigger. For example, &apos;open-app&apos;
     ///
-    ///     event_label - Description of what the metric is. For example, "memory"
+    /// *event_label* -- Description of what the metric is. For example, &apos;memory&apos;
     ///
-    ///     event_value - Numeric value of the metric.
+    /// *event_value* -- Numeric value of the metric.
+    ///
     /// Returns:
     ///
-    ///     true - Was able to record the event.
+    /// *true* - Success
     ///
-    ///     false - Error, unable to record the event.
+    /// *false* - Error, unable to record the event
     pub fn record_event(&mut self,
                         event_category: &str,
                         event_action: &str,
