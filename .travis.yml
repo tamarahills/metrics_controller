@@ -1,0 +1,21 @@
+sudo: required
+
+os:
+  - osx
+
+dist: trusty
+
+language: rust
+rust:
+  - nightly-2016-05-07
+
+
+env:
+  - OPENSSL_INCLUDE_DIR=/usr/local/Cellar/openssl/1.0.2f/include/ DEP_OPENSSL_INCLUDE=/usr/local/Cellar/openssl/1.0.2f/include/
+
+before_install:
+  - brew install openssl
+
+script:
+  - cargo build
+  - cargo test
