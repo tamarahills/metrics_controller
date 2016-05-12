@@ -1,5 +1,7 @@
 # metrics_controller
 
+[![Build Status](https://travis-ci.org/tamarahills/metrics_controller.svg?branch=master)](https://travis-ci.org/tamarahills/metrics_controller)
+
 * |cargo test| -- builds the library and the main target for testing, runs unit tests
 * |RUST_TEST_THREADS=1 cargo test --features integration| -- builds the library and the main target for testing, runs integration tests in serial
 * |cargo clean| -- cleans out the target
