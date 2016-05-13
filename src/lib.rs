@@ -1,5 +1,6 @@
 // These lines are necessary to allow the compiler plugin for custom_derive
 // to allow you to annotate the JSON object as one that gets serialized.
+#![feature(drop_types_in_const)]
 #![feature(custom_derive, plugin)]
 #![plugin(serde_macros)]
 #![feature(plugin)]
@@ -17,6 +18,8 @@ extern crate lazy_static;
 
 pub mod controller;
 pub use controller::MetricsController;
+pub use foreign_metrics::Foreign;
+pub mod foreign_metrics;
 mod logger;
 mod metrics_worker;
 #[cfg(not(feature = "integration"))]
