@@ -50,3 +50,12 @@ And, of course, to redirect the log messages to a file:
     3.  Load test/metrics_test.html in a browser.  
 
   Note that the test may take up to 3 minutes to execute as it's verifying the data was received at the server.
+
+## C interface
+There is a C interface that can be used from C and Java applications.  
+
+To utilize this:
+  1.  Run |cargo build|
+  2.  This will create a target under ./target/debug/libmetrics_controller.dylib (Mac), .so (Linux), or .dll (Windows).
+  3.  Refer to ./examples/ffi_test.c for an example of how to invoke the library and for instructions to run
+  the sample.
