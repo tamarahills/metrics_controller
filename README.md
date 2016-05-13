@@ -11,17 +11,14 @@
 ## Toolchain
  run |multirust override nightly-2016-05-07| to make sure you have the correct rust version.
 
-### Building on OSX El Capitan
-When building from a clean state on MacOS El Capitan, if you see the following error:
+## Extra steps for Mac OS X
 
-    failed to run custom build command for `openssl v0.7.6`
-     ...
-    src/c_helpers.c:1:10: fatal error: 'openssl/ssl.h' file not found
+The metrics lib requires an up-to-date openssl library. In order to make sure you have the correct library, we recommend you install brew and run:
 
-export the following environment variables pointing to your openssl sdk. For example, if you have used homebrew to install openssl:
-
-    export OPENSSL_INCLUDE_DIR=/usr/local/Cellar/openssl/1.0.2f/include/
-    export DEP_OPENSSL_INCLUDE=/usr/local/Cellar/openssl/1.0.2f/include/
+``` bash
+brew install openssl
+source tools/mac-os-x-setup.source.sh
+```
 
 ## Logging
  The metrics library uses the `env_logger` package for logging functionality. Two notable features of this package
