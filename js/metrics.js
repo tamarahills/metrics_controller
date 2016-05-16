@@ -52,22 +52,38 @@
                                            event_action,   // Action that triggered event (e.g., 'open-app')
                                            event_label,    // Metric label (e.g., 'memory')
                                            event_value) {  // Value of metric (numeric)
-
       var self = this;
-
-      var xhr = new XMLHttpRequest();
-
-      xhr.open('POST', "https://www.google-analytics.com/batch");
-
-      xhr.timeout = 3000;
-
-      //xhr.setRequestHeader('Content-type', 'application/json');
-      xhr.responseType = 'text';
+      var post_url = 'https://www.google-analytics.com/batch';
       var event_string = formatEventString();
-
       console.log('METRICS - event string:', event_string);
 
-      xhr.send(event_string);
+      // The fetch interface is used by newer browsers while the XHR is used by
+      // older versions of browsers including Safari which currently does not
+      // support fetch interface.
+      if(this.fetch) {
+        var init = { method: 'POST', body: event_string};
+        fetch(post_url, init)
+        .then(function(response) {
+          if (response.ok) {
+            console.log('METRICS - Success');
+          } else {
+            console.log('METRICS - Error: ' + response.status);
+          }
+        });
+      } else {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', post_url);
+        xhr.timeout = 3000;
+
+        xhr.responseType = 'text';
+
+        xhr.send(event_string);
+
+        xhr.onload = onload;
+        xhr.onerror = onerror;
+        xhr.onabort = onerror;
+        xhr.ontimeout = onerror;
+      }
 
       function onload() {
           console.log('METRICS - event recorded:', event_category, ',',
@@ -114,11 +130,5 @@
 
           return event_string;
       }
-
-      xhr.onload = onload;
-      xhr.onerror = onerror;
-      xhr.onabort = onerror;
-      xhr.ontimeout = onerror;
-    };
-
+  };
 })(this);
