@@ -125,7 +125,6 @@ fn c_to_string(cstr: *const c_char) -> String {
 }
 
 pub struct Foreign {
-    #[allow(dead_code)]
     events: Option<Arc<Mutex<Events>>>,
     mw: Option<MetricsWorker>
 }

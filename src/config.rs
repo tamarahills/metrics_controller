@@ -15,7 +15,6 @@ use std::collections::BTreeMap;
 //an environment variable to locate this file or can be passed in.
 // The worker thread and the app thread will both read from this file.
 
-
 #[allow(non_upper_case_globals)]
 const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
 
@@ -30,7 +29,8 @@ impl Config {
             parsed_json: None,
         }
     }
-    #[allow(dead_code)]
+
+    #[cfg(not(test))]
     pub fn create_and_write_json(&mut self, file_name: &str, json: &str)  {
         logger().log(LogLevelFilter::Debug, format!("file: {}", file_name).as_str());
         let f = File::create(file_name);
@@ -41,7 +41,6 @@ impl Config {
             Err(e) => panic!("cannot open file: {}", e),
         };
     }
-
 
     pub fn init(&mut self, file_name: &str) -> bool {
         //TODO:  Need to make this look at env variable or take a path to the file.
@@ -92,7 +91,6 @@ impl Config {
         }
     }
 
-    #[allow(dead_code)]
     pub fn get_string(&mut self, key: &str) -> String {
         if let Some(ref mut parsed_json) = self.parsed_json {
             let val: Option<Value> = Some(parsed_json.get(key).unwrap().clone());
@@ -176,8 +174,7 @@ describe! parsing_file {
     }
 
     it "get should return a value for an existing key" {
-        let val: Option<Value> = cfg.get("sendInterval");
-        match val {
+        match cfg.get("sendInterval") {
             Some(v) => assert_eq!(v, Value::U64(10)),
             None => {
                 assert!(false);

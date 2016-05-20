@@ -2,27 +2,27 @@ extern crate serde_json;
 extern crate uuid;
 extern crate url;
 
-#[allow(unused_imports)]
-use config::Config;
 use controller::EventInfo;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
-
 use std::collections::VecDeque;
-#[allow(unused_imports)]
-use self::uuid::Uuid;
-#[allow(unused_imports)]
-use self::serde_json::Value;
 use url::percent_encoding;
 use url::percent_encoding::SIMPLE_ENCODE_SET;
+
+#[cfg(not(test))]
+use config::Config;
+#[cfg(not(test))]
+use self::uuid::Uuid;
+#[cfg(not(test))]
+use self::serde_json::Value;
 
 #[allow(non_upper_case_globals)]
 // Shortcut to MetricsLoggerFactory function that gets the logger instance.
 const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
 
 const MAX_EVENT_SIZE: usize = 20;
-#[allow(dead_code)]
+#[cfg(not(test))]
 const KEY_CID:&'static str = "cid";
 
 define_encode_set! {
@@ -45,7 +45,6 @@ impl Events {
         }
     }
 
-    #[allow(dead_code)]
     pub fn insert_event(&mut self, event_category: &str, event_action: &str, event_label: &str, event_value: u64) -> bool  {
         let event_string = format!("v=1&t=event&tid=UA-77033033-1&cid={0}&ec={1}&ea={2}&el={3}&ev={4}&an={5}&av={6}&ul={7}\
                                     &cd1={8}&cd2={9}&cd3={10}&cd4={11}&cd5={12}&cd6={13}",
@@ -171,13 +170,7 @@ describe! events_functionality {
         let formatted_event = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
                                 &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456";
         ev.insert_event("category", "action", "label", 1);
-        let val: Option<String> = ev.event_storage.pop_front();
-        match val {
-            Some(v) => {
-                assert_eq!(v, formatted_event);
-            },
-            None => assert!(false),
-        }
+        assert_eq!(formatted_event, ev.event_storage.pop_front().unwrap());
     }
 
     it "should return true if there are more than MAX_EVENT_SIZE" {

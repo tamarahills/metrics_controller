@@ -10,15 +10,12 @@ use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
 use events::Events;
 use std::sync::{Arc, Mutex};
-#[allow(unused_imports)]
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::thread::JoinHandle;
-#[allow(unused_imports)] // This will go away with next commit.
 use transmitter::Transmitter;
-
 
 #[allow(non_upper_case_globals)]
 const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
@@ -130,6 +127,7 @@ impl MetricsSender {
 
 pub struct MetricsWorker {
     metrics_send: MetricsSender,
+    // Compiler bug? `join_handle` is used...
     #[allow(dead_code)]
     join_handle: Option<JoinHandle<()>>,
 }
@@ -261,6 +259,7 @@ impl ThreadTest {
 #[cfg(test)]
 describe! metrics_timer {
     before_each {
+        // Required to prevent 'unused import' compiler warning
         #[allow(unused_imports)]
         use metrics_worker::time::get_time;
         let mut mt = MetricsTimer::new();
@@ -324,7 +323,6 @@ describe! metrics_timer {
 #[cfg(test)]
 describe! metrics_worker {
     before_each {
-        #[allow(unused_imports)]
         use std::sync::{Arc, Mutex};
         use controller::EventInfo;
         use events::Events;
