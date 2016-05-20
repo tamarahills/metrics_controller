@@ -152,14 +152,14 @@ fn send_helper<'a>(body: &'a String) {
     let _ = file.write(body.as_bytes());
 }
 
-#[allow(dead_code)]
+#[cfg(not(feature = "integration"))]
 #[cfg(test)]
 enum SendResult {
     Success,
     Failure
 }
 
-#[allow(dead_code)]
+#[cfg(not(feature = "integration"))]
 #[cfg(test)]
 struct MockSendWithRetry {
     retries: u32,
@@ -170,6 +170,7 @@ struct MockSendWithRetry {
     result: SendResult
 }
 
+#[cfg(not(feature = "integration"))]
 #[cfg(test)]
 impl CanRetry for MockSendWithRetry {
     fn get_retries(&self) -> u32 { self.retries }

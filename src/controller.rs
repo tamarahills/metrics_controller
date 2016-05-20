@@ -45,7 +45,6 @@ impl EventInfo {
 
 /// The metrics controller for the CD Metrics Library
 pub struct MetricsController {
-    #[allow(dead_code)] // Issue #33 -- Will go away with subsequent commits.
     events: Arc<Mutex<Events>>,
     mw: MetricsWorker
 }
