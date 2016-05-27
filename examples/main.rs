@@ -12,16 +12,16 @@ use std::thread;
 
 fn main() {
     let mut metrics_controller = MetricsController::new(
-        "foxbox".to_string(),
-        "1.0".to_string(),
-        "default".to_string(),
-        "20160305".to_string(),
-        "rust".to_string(),
-        "en-us".to_string(),
-        "raspberry-pi".to_string(),
-        "arm".to_string(),
-        "linux".to_string(),
-        "1.2.3.".to_string());
+        "foxbox",
+        "1.0",
+        "default",
+        "20160305",
+        "rust",
+        "en-us",
+        "raspberry-pi",
+        "arm",
+        "linux",
+        "1.2.3.");
 
     metrics_controller.record_event("event category",
                                     "event action",

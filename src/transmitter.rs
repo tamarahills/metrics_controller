@@ -30,25 +30,23 @@ const RETRY_WAIT: u32 = 500;
 const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
 
 pub struct Transmitter {
-    metrics_server_url: String
+    metrics_server_url: String,
 }
 
 impl Transmitter {
     pub fn new() -> Transmitter {
         logger().log(LogLevelFilter::Info, "Creating Transmitter");
-        Transmitter {
-            metrics_server_url: METRICS_SERVER_URL.to_string()
-        }
+        Transmitter { metrics_server_url: METRICS_SERVER_URL.to_string() }
     }
 
     pub fn transmit(&self, body: String) -> bool {
-        //TODO: perhaps make the retries configurable.
+        // TODO: perhaps make the retries configurable.
 
         let mut sender = SendWithRetry {
-          url: &self.metrics_server_url,
-          body: &body,
-          retries: RETRY_MAX,
-          wait_time: RETRY_WAIT
+            url: &self.metrics_server_url,
+            body: &body,
+            retries: RETRY_MAX,
+            wait_time: RETRY_WAIT,
         };
 
         // Rust note: Even though 'sender' is declared as mutable, it
@@ -61,35 +59,38 @@ impl Transmitter {
 
         // This function retries sending the crash ping a given number of times
         // and waits a given number of msecs in between retries.
-        match retry::retry(sender.get_retries(), sender.get_wait_time(),
-            || sender.send(),
-            // This next line evaluates to true if the request was successful
-            // and false if it failed and we need to retry.  Think of this
-            // as the condition to keep retrying or stop.
-            |send_response| match *send_response {
-                Ok(ref status)=> {
-                    if *status == StatusCode::Ok {
-                        true
-                    } else {
-                        logger().log(LogLevelFilter::Info, "Server said 'not ok' (retry)");
-                        false
-                    }
-                },
-                Err(ref error) => {
-                    logger().log(LogLevelFilter::Error, format!("Error sending data (retry): {}", error).as_str());
-                    false
-                },
-            }) {
+        match retry::retry(sender.get_retries(),
+                           sender.get_wait_time(),
+                           || sender.send(),
+                           // This next line evaluates to true if the request was successful
+                           // and false if it failed and we need to retry.  Think of this
+                           // as the condition to keep retrying or stop.
+                           |send_response| match *send_response {
+                               Ok(ref status) => {
+                                   if *status == StatusCode::Ok {
+                                       true
+                                   } else {
+                                       logger().log(LogLevelFilter::Info,
+                                                    "Server said 'not ok' (retry)");
+                                       false
+                                   }
+                               }
+                               Err(ref error) => {
+                                   logger().log(LogLevelFilter::Error,
+                                                format!("Error sending data (retry): {}", error)
+                                                    .as_str());
+                                   false
+                               }
+                           }) {
             // This below is the final disposition of retrying n times.
             Ok(_) => {
-                logger().log(LogLevelFilter::Debug, "Final disposition of 'send': success");
+                logger().log(LogLevelFilter::Debug,
+                             "Final disposition of 'send': success");
                 return true;
-            },
+            }
             Err(error) => {
-                logger().log(
-                    LogLevelFilter::Error,
-                    format!("Could not send data to server (final): {}", error).as_str()
-                );
+                logger().log(LogLevelFilter::Error,
+                             format!("Could not send data to server (final): {}", error).as_str());
                 return false;
             }
         }
@@ -116,39 +117,43 @@ struct SendWithRetry<'a> {
     url: &'a str,
     body: &'a String,
     retries: u32,
-    wait_time: u32
+    wait_time: u32,
 }
 
 impl<'a> CanRetry for SendWithRetry<'a> {
-    fn get_retries(&self) -> u32 { self.retries }
-    fn get_wait_time(&self) -> u32 { self.wait_time }
+    fn get_retries(&self) -> u32 {
+        self.retries
+    }
+    fn get_wait_time(&self) -> u32 {
+        self.wait_time
+    }
     fn send(&mut self) -> Result<StatusCode, String> {
-        logger().log(LogLevelFilter::Info, format!("Sending {} to {}", self.body, self.url).as_str());
+        logger().log(LogLevelFilter::Info,
+                     format!("Sending {} to {}", self.body, self.url).as_str());
         send_helper(self.body);
         let client = hyper::Client::new();
         match client.post(self.url).body(self.body).send() {
             Ok(response) => return Ok(response.status),
-            Err(error) => return Err(error.description().to_string())
+            Err(error) => return Err(error.description().to_string()),
         }
     }
 }
 
 #[allow(unused_variables)]
 #[cfg(not(feature = "integration"))]
-fn send_helper<'a>(body: &'a String) {
-}
+fn send_helper<'a>(body: &'a String) {}
 
 #[cfg(feature = "integration")]
 fn send_helper<'a>(body: &'a String) {
     let path = Path::new("integration1.dat");
     let display = path.display();
     let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display,
-                Error::description(&why)),
-        Ok(file) => file
+        Err(why) => panic!("couldn't create {}: {}", display, Error::description(&why)),
+        Ok(file) => file,
     };
 
-    logger().log(LogLevelFilter::Debug, format!("Writing {} to {}", body, display).as_str());
+    logger().log(LogLevelFilter::Debug,
+                 format!("Writing {} to {}", body, display).as_str());
     let _ = file.write(body.as_bytes());
 }
 
@@ -156,7 +161,7 @@ fn send_helper<'a>(body: &'a String) {
 #[cfg(test)]
 enum SendResult {
     Success,
-    Failure
+    Failure,
 }
 
 #[cfg(not(feature = "integration"))]
@@ -167,40 +172,44 @@ struct MockSendWithRetry {
     attempts: u32,
     succeed_on_attempt: u32,
     succeeded_on_attempt: u32,
-    result: SendResult
+    result: SendResult,
 }
 
 #[cfg(not(feature = "integration"))]
 #[cfg(test)]
 impl CanRetry for MockSendWithRetry {
-    fn get_retries(&self) -> u32 { self.retries }
-    fn get_wait_time(&self) -> u32 { self.wait_time }
+    fn get_retries(&self) -> u32 {
+        self.retries
+    }
+    fn get_wait_time(&self) -> u32 {
+        self.wait_time
+    }
     fn send(&mut self) -> Result<StatusCode, String> {
-        //
         // Should the 'send' function succeed?
         //
         match self.result {
             SendResult::Success => {
-                //
                 // 'send' function should succeed.
                 //
                 // Determine if it should succeed on the current attempt.
                 self.attempts += 1;
                 logger().log(LogLevelFilter::Info,
-                             format!("In MockSendWithRetry::send, attempts: {}", self.attempts).as_str());
+                             format!("In MockSendWithRetry::send, attempts: {}", self.attempts)
+                                 .as_str());
                 if self.succeed_on_attempt == self.attempts {
                     self.succeeded_on_attempt = self.attempts;
-                    logger().log(LogLevelFilter::Info, "In MockSendWithRetry::send, returning Ok (200)");
+                    logger().log(LogLevelFilter::Info,
+                                 "In MockSendWithRetry::send, returning Ok (200)");
                     return Ok(StatusCode::Ok);
                 } else {
                     // No success yet, return a failure return code
                     logger().log(LogLevelFilter::Info,
-                                 "In MockSendWithRetry::send, returning Ok (Unauthorized) -- retry");
+                                 "In MockSendWithRetry::send, returning Ok (Unauthorized) -- \
+                                  retry");
                     return Ok(StatusCode::Unauthorized);
                 }
-            },
+            }
             SendResult::Failure => {
-                //
                 // Mock that the 'send' function failed. Return 'Err' object.
                 //
                 return Err("!!!!!! mock error !!!!!!!".to_string());
@@ -226,12 +235,13 @@ fn test_send_success() {
         attempts: 0,
         succeed_on_attempt: 1,
         succeeded_on_attempt: 0, // This is populated by the test.
-        result: SendResult::Success
+        result: SendResult::Success,
     };
     let mock_transmitter = create_mock_transmitter();
     let bret = mock_transmitter.send(&mut mock_sender);
     assert_eq!(bret, true);
-    assert_eq!(mock_sender.succeeded_on_attempt, mock_sender.succeed_on_attempt);
+    assert_eq!(mock_sender.succeeded_on_attempt,
+               mock_sender.succeed_on_attempt);
 }
 
 #[cfg(not(feature = "integration"))]
@@ -243,13 +253,14 @@ fn test_send_retry_success() {
         attempts: 0,
         succeed_on_attempt: 3,
         succeeded_on_attempt: 0, // This is populated by the test.
-        result: SendResult::Success
+        result: SendResult::Success,
     };
     let mock_transmitter = create_mock_transmitter();
     let bret = mock_transmitter.send(&mut mock_sender);
 
     assert_eq!(bret, true);
-    assert_eq!(mock_sender.succeeded_on_attempt, mock_sender.succeed_on_attempt);
+    assert_eq!(mock_sender.succeeded_on_attempt,
+               mock_sender.succeed_on_attempt);
 }
 
 #[cfg(not(feature = "integration"))]
@@ -261,7 +272,7 @@ fn test_send_retry_failure() {
         attempts: 0,
         succeed_on_attempt: 0,
         succeeded_on_attempt: 0,
-        result: SendResult::Failure
+        result: SendResult::Failure,
     };
     let mock_transmitter = create_mock_transmitter();
     let bret = mock_transmitter.send(&mut mock_sender);
