@@ -21,7 +21,7 @@ describe("Metrics", function() {
       // 1. Run a Query (any query).  2.  Scroll down to the "API Query URI" box.  3.  Check the checkbox
       // "Include current access_token in the Query URI (will expire in ~60 minutes)."  4.  Copy the
       // access_token parameter and paste into the line below.
-      var access_token = 'ya29.CjPfAo0rFRfhCB-bhhMldVXDiP3khRRWfbvs11qPNFVGtdIa1Wy3mkeQZDcIkn7x4dPpfmo';
+      var access_token = 'ya29.CjPvAiqOyUuO80MfKwY2sqaPOOJ6gk5TXa_YPacCwRRjWvvO8Fm8RtnOM52tmg-ajs1boF4';
 
       var metrics = new Metrics('1234', opt);
       metrics.recordEvent(event_category, event_action, event_label, event_value);

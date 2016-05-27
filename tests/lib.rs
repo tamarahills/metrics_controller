@@ -163,7 +163,7 @@ fn test_cid_file_creation_and_proper_reuse() {
 
     let expected_body = format!(
         "v=1&t=event&tid=UA-77033033-1&cid={0}&ec=event%20category&ea=event%20action&el=event%20label&ev={1}\
-         &an={2}&av={3}&ul={4}&cd1={5}&cd2={6}&cd3={7}&cd4={8}&cd5={9}&cd6={10}%0A",
+         &an={2}&av={3}&ul={4}&cd1={5}&cd2={6}&cd3={7}&cd4={8}&cd5={9}&cd6={10}",
          cid1, event_value, ei.app_name, ei.app_version, ei.locale, ei.os, ei.os_version,
          ei.device, ei.arch, ei.app_platform, ei.app_build_id
     );
@@ -184,8 +184,9 @@ fn test_cid_file_creation_and_proper_reuse() {
             display, Error::description(&why)),
         Ok(_) => (),
     }
-
-    assert_eq!(expected_body.to_string(), s);
+    let s_slice: &str = &s[..];
+    let e_slice: &str = &expected_body[..];
+    assert_eq!(s_slice.find(e_slice), Some(0));
 
     // Clean up any side effects of the test.
     delete_file("integration1.dat");
@@ -215,21 +216,9 @@ fn test_max_body_size() {
     for _ in 0.. 20 {
         metrics_controller.record_event(event_category, event_action, event_label, event_value);
     }
-    let cid1 = read_client_id();
 
     // This sleep is necessary so the main thread does not exit.
     thread::sleep(std::time::Duration::from_secs(20));
-
-    let expected_body = format!(
-        "v=1&t=event&tid=UA-77033033-1&cid={0}&ec=event%20category&ea=event%20action&el=event%20label&ev={1}\
-         &an={2}&av={3}&ul={4}&cd1={5}&cd2={6}&cd3={7}&cd4={8}&cd5={9}&cd6={10}%0A",
-         cid1, event_value, ei.app_name, ei.app_version, ei.locale, ei.os, ei.os_version,
-         ei.device, ei.arch, ei.app_platform, ei.app_build_id
-    );
-    let mut max_body = String::new();
-    for _ in 0..20 {
-        max_body.push_str(&expected_body.to_string());
-    }
 
     let path = Path::new("integration1.dat");
     let display = path.display();
@@ -248,7 +237,11 @@ fn test_max_body_size() {
         Ok(_) => (),
     }
 
-    assert_eq!(max_body.to_string(), s);
+    let s_slice: &str = &s[..];
+
+    let v: Vec<&str> = s_slice.split("UA-77033033-1").collect();
+    // 21 chunks since split on the property id.
+    assert_eq!(v.len(), 21);
 
     // Clean up any side effects of the test.
     delete_file("integration1.dat");
@@ -265,7 +258,7 @@ fn test_google_analytics_received() {
     let event_category     = "test";
     let event_action       = "integration";
     let event_label        = &Uuid::new_v4().to_simple_string().to_string();
-    let event_value        = 999999;
+    let event_value        = 5;
     let ei = get_event_info();
 
     let mut metrics_controller = MetricsController::new(
@@ -273,7 +266,10 @@ fn test_google_analytics_received() {
         ei.app_build_id.to_string(), ei.app_platform.to_string(), ei.locale.to_string(),
         ei.device.to_string(), ei.arch.to_string(), ei.os.to_string(), ei.os_version.to_string());
 
-    metrics_controller.record_event(event_category, event_action, event_label, event_value);
+    // Test with the max payload number of events (20 hits can go in one POST request).
+    for _ in 0 .. 20 {
+        metrics_controller.record_event(event_category, event_action, event_label, event_value);
+    }
 
     // This sleep is necessary so the main thread does not exit.
     thread::sleep(std::time::Duration::from_secs(30));
@@ -335,7 +331,10 @@ fn test_google_analytics_received() {
                 match event_val {
                     Value::String(v) => {
                         println!("String is: {}", v);
-                        if v == event_value.to_string() {
+                        // When the eventValue is 100, that means all 20 events
+                        // have been processed by GA with a value of 5 (5*20=100).
+                        // It make take a couple of iterations for this to reach 100.
+                        if v == "100".to_string() {
                             println!("success");
                             success = true;
                             break;

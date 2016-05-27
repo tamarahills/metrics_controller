@@ -126,9 +126,30 @@
                               '&cd3=' + self.device +
                               '&cd4=' + self.arch +
                               '&cd5=' + self.app_platform +
-                              '&cd6=' + self.app_build_id);
+                              '&cd6=' + self.app_build_id +
+                              '&cd7=' + getFormattedTime());
 
           return event_string;
       }
+
+    function getFormattedTime() {
+      var date = new Date();
+
+      var month = date.getUTCMonth() + 1;
+      var day = date.getUTCDate();
+      var hour = date.getUTCHours();
+      var min = date.getUTCMinutes();
+      var sec = date.getUTCSeconds();
+
+      month = (month < 10 ? "0" : "") + month;
+      day = (day < 10 ? "0" : "") + day;
+      hour = (hour < 10 ? "0" : "") + hour;
+      min = (min < 10 ? "0" : "") + min;
+      sec = (sec < 10 ? "0" : "") + sec;
+
+      var str = date.getUTCFullYear() + "-" + month + "-" +  day + " " +  hour + ":" + min + ":" + sec;
+
+      return str;
+    }
   };
 })(this);
