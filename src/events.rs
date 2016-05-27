@@ -1,4 +1,5 @@
 extern crate serde_json;
+extern crate time;
 extern crate uuid;
 extern crate url;
 
@@ -46,8 +47,9 @@ impl Events {
     }
 
     pub fn insert_event(&mut self, event_category: &str, event_action: &str, event_label: &str, event_value: u64) -> bool  {
+
         let event_string = format!("v=1&t=event&tid=UA-77033033-1&cid={0}&ec={1}&ea={2}&el={3}&ev={4}&an={5}&av={6}&ul={7}\
-                                    &cd1={8}&cd2={9}&cd3={10}&cd4={11}&cd5={12}&cd6={13}",
+                                    &cd1={8}&cd2={9}&cd3={10}&cd4={11}&cd5={12}&cd6={13}&cd7={14}",
                                     self.encode_value(self.client_id.clone()),
                                     self.encode_value(event_category.to_string()),
                                     self.encode_value(event_action.to_string()),
@@ -61,7 +63,8 @@ impl Events {
                                     self.encode_value(self.event_info.device.clone()),
                                     self.encode_value(self.event_info.arch.clone()),
                                     self.encode_value(self.event_info.app_platform.clone()),
-                                    self.encode_value(self.event_info.app_build_id.clone()));
+                                    self.encode_value(self.event_info.app_build_id.clone()),
+                                    self.encode_value(get_time_string()));
         logger().log(LogLevelFilter::Debug, format!("Inserted event: {}", event_string).as_str());
         self.event_storage.push_back(event_string);
 
@@ -106,7 +109,7 @@ impl Events {
             match val {
                 Some(v) => {
                     body.push_str(&v);
-                    body.push_str("%0A");
+                    body.push_str("\n");
                 },
                 None => {
                     break;
@@ -141,6 +144,20 @@ fn get_client_id() -> String {
     "9eccb690-93aa-4513-835a-9a4f0f0e2a71".to_string()
 }
 
+
+#[cfg(not(test))]
+fn get_time_string() -> String {
+    let ts = time::now_utc();
+    let time_string = format!("{0:4}-{1:02}-{2:02} {3:02}:{4:02}:{5:02}", ts.tm_year + 1900, ts.tm_mon + 1, ts.tm_mday,
+                                                                          ts.tm_hour, ts.tm_min, ts.tm_sec);
+    time_string
+}
+
+#[cfg(test)]
+fn get_time_string() -> String {
+    "2016-05-25 22:36:57".to_string()
+}
+
 #[cfg(not(feature = "integration"))]
 #[cfg(test)]
 describe! events_functionality {
@@ -168,7 +185,8 @@ describe! events_functionality {
 
     it "should format an event properly" {
         let formatted_event = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
-                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456";
+                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456\
+                                &cd7=2016-05-25%2022:36:57";
         ev.insert_event("category", "action", "label", 1);
         assert_eq!(formatted_event, ev.event_storage.pop_front().unwrap());
     }
@@ -207,7 +225,8 @@ describe! events_functionality {
 
     it "should format the body correctly for one event" {
         let formatted_body = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
-                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456%0A";
+                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456\
+                                &cd7=2016-05-25%2022:36:57\n";
         ev.insert_event("category", "action", "label", 1);
         let body = ev.get_events_as_body();
         assert_eq!(body, formatted_body);
@@ -215,9 +234,11 @@ describe! events_functionality {
 
     it "should format the body correctly for multiple events" {
         let formatted_body = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
-                            &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456%0A\
-                            v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
-                                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456%0A";
+                                  &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test\
+                                  &cd6=20160320123456&cd7=2016-05-25%2022:36:57\n\
+                              v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
+                                  &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2\
+                                  &cd4=arm&cd5=rust%20test&cd6=20160320123456&cd7=2016-05-25%2022:36:57\n";
         ev.insert_event("category", "action", "label", 1);
         ev.insert_event("category", "action", "label", 1);
         let body = ev.get_events_as_body();
