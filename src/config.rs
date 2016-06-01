@@ -11,8 +11,8 @@ use std::path::Path;
 use std::collections::BTreeMap;
 
 
-//This is the config file that reads all the json from metricsconfig.json.  We can initially use
-//an environment variable to locate this file or can be passed in.
+// This is the config file that reads all the json from metricsconfig.json.  We can initially use
+// an environment variable to locate this file or can be passed in.
 // The worker thread and the app thread will both read from this file.
 
 #[allow(non_upper_case_globals)]
@@ -23,35 +23,35 @@ pub struct Config {
 }
 
 impl Config {
-
     pub fn new() -> Config {
-        Config{
-            parsed_json: None,
-        }
+        Config { parsed_json: None }
     }
 
     #[cfg(not(test))]
-    pub fn create_and_write_json(&mut self, file_name: &str, json: &str)  {
-        logger().log(LogLevelFilter::Debug, format!("file: {}", file_name).as_str());
+    pub fn create_and_write_json(&mut self, file_name: &str, json: &str) {
+        logger().log(LogLevelFilter::Debug,
+                     format!("file: {}", file_name).as_str());
         let f = File::create(file_name);
         match f {
             Ok(mut t) => {
                 let _ = t.write(json.as_bytes());
-            },
+            }
             Err(e) => panic!("cannot open file: {}", e),
         };
     }
 
     pub fn init(&mut self, file_name: &str) -> bool {
-        //TODO:  Need to make this look at env variable or take a path to the file.
-        logger().log(LogLevelFilter::Debug, format!("config file: {}", file_name).as_str());
+        // TODO:  Need to make this look at env variable or take a path to the file.
+        logger().log(LogLevelFilter::Debug,
+                     format!("config file: {}", file_name).as_str());
         let path = Path::new(file_name);
         let display = path.display();
         // Open the path in read-only mode.
         let mut file = match File::open(&path) {
             Err(why) => {
-                logger().log(LogLevelFilter::Error, format!("couldn't open {}: {}", display,
-                                                       Error::description(&why)).as_str());
+                logger().log(LogLevelFilter::Error,
+                             format!("couldn't open {}: {}", display, Error::description(&why))
+                                 .as_str());
                 return false;
             }
             Ok(file) => file,
@@ -64,8 +64,10 @@ impl Config {
                 logger().log(LogLevelFilter::Error, format!("Error: {}", why).as_str());
                 return false;
             }
-            Ok(_) => logger().log(LogLevelFilter::Debug,
-                format!("file contains: {}", s).as_str()),
+            Ok(_) => {
+                logger().log(LogLevelFilter::Debug,
+                             format!("file contains: {}", s).as_str())
+            }
         }
         self.parse_json(s);
         true
@@ -95,10 +97,12 @@ impl Config {
         if let Some(ref mut parsed_json) = self.parsed_json {
             let val: Option<Value> = Some(parsed_json.get(key).unwrap().clone());
             match val {
-                Some(v) => match v {
-                    Value::String(v) => v.clone(),
-                    _ => panic!("Expected a String Value"),
-                },
+                Some(v) => {
+                    match v {
+                        Value::String(v) => v.clone(),
+                        _ => panic!("Expected a String Value"),
+                    }
+                }
                 None => panic!("Value not found"),
             }
         } else {
@@ -110,10 +114,12 @@ impl Config {
         if let Some(ref mut parsed_json) = self.parsed_json {
             let val: Option<Value> = Some(parsed_json.get(key).unwrap().clone());
             match val {
-                Some(v) => match v {
-                    Value::U64(v) => return v,
-                    _ => panic!("Expected a u64"),
-                },
+                Some(v) => {
+                    match v {
+                        Value::U64(v) => return v,
+                        _ => panic!("Expected a u64"),
+                    }
+                }
                 None => panic!("Value not found"),
             }
         } else {
@@ -148,9 +154,11 @@ describe! parsing_file {
         #[allow(unused_imports)]
         use config::serde_json::Value;
 
-        let s: String = "{\"sendInterval\": 10, \"saveInterval\": 2, \
-        	\"startTime\": 0, \"savePath\": \"testSavePath\", \
-        	\"logPath\": \"/Volumes/development/metrics_controller/log\"}".to_string();
+        let s = r#"{ "sendInterval": 10,
+                     "saveInterval": 2,
+        	         "startTime": 0,
+                     "savePath": "testSavePath",
+        	         "logPath": "/Volumes/development/metrics_controller/log" }"#.to_string();
         let mut cfg = Config::new();
         cfg.parse_json(s);
     }

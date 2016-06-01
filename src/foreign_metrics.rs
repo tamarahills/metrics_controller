@@ -1,9 +1,8 @@
-/*
- * This file is specifically for use from non-Rust applications.  It is very
- * similar to the MetricsController object except that it makes use of a singleton
- * to account for the fact that we must flatten out the interface to match to a
- * C API calling standard.
- */
+// This file is specifically for use from non-Rust applications.  It is very
+// similar to the MetricsController object except that it makes use of a singleton
+// to account for the fact that we must flatten out the interface to match to a
+// C API calling standard.
+//
 
 use metrics_worker::MetricsWorker;
 use events::Events;
@@ -45,16 +44,16 @@ lazy_static! {
 ///         "redhat 1.0");
 /// ```
 #[no_mangle]
-pub extern fn init_metrics(app_name: *const c_char,
-                              app_version: *const c_char,
-                              app_update_channel: *const c_char,
-                              app_build_id: *const c_char,
-                              app_platform: *const c_char,
-                              locale: *const c_char,
-                              device: *const c_char,
-                              arch: *const c_char,
-                              os: *const c_char,
-                              os_version: *const c_char) {
+pub extern "C" fn init_metrics(app_name: *const c_char,
+                               app_version: *const c_char,
+                               app_update_channel: *const c_char,
+                               app_build_id: *const c_char,
+                               app_platform: *const c_char,
+                               locale: *const c_char,
+                               device: *const c_char,
+                               arch: *const c_char,
+                               os: *const c_char,
+                               os_version: *const c_char) {
     let app_name = c_to_string(app_name);
     let app_version = c_to_string(app_version);
     let app_update_channel = c_to_string(app_update_channel);
@@ -65,17 +64,16 @@ pub extern fn init_metrics(app_name: *const c_char,
     let arch = c_to_string(arch);
     let os = c_to_string(os);
     let os_version = c_to_string(os_version);
-    let ev: EventInfo = EventInfo::new(
-                locale,
-                os,
-                os_version,
-                device,
-                app_name,
-                app_version,
-                app_update_channel,
-                app_build_id,
-                app_platform,
-                arch);
+    let ev: EventInfo = EventInfo::new(&locale,
+                                       &os,
+                                       &os_version,
+                                       &device,
+                                       &app_name,
+                                       &app_version,
+                                       &app_update_channel,
+                                       &app_build_id,
+                                       &app_platform,
+                                       &arch);
     CONTROLLER.lock().unwrap().init(ev);
     logger().log(LogLevelFilter::Info, "Initialized Metrics Library.");
 }
@@ -99,15 +97,19 @@ pub extern fn init_metrics(app_name: *const c_char,
 ///
 /// *false* - Error, unable to record the event
 #[no_mangle]
-pub extern fn record_event(event_category: *const c_char,
-                           event_action: *const c_char,
-                           event_label: *const c_char,
-                           event_value: i32) -> bool {
+pub extern "C" fn record_event(event_category: *const c_char,
+                               event_action: *const c_char,
+                               event_label: *const c_char,
+                               event_value: i32)
+                               -> bool {
     let event_category = c_to_string(event_category);
     let event_action = c_to_string(event_action);
     let event_label = c_to_string(event_label);
 
-    CONTROLLER.lock().unwrap().record_event(&event_category, &event_action, &event_label, event_value as u64)
+    CONTROLLER.lock().unwrap().record_event(&event_category,
+                                            &event_action,
+                                            &event_label,
+                                            event_value as u64)
 }
 
 fn c_to_string(cstr: *const c_char) -> String {
@@ -126,14 +128,14 @@ fn c_to_string(cstr: *const c_char) -> String {
 
 pub struct Foreign {
     events: Option<Arc<Mutex<Events>>>,
-    mw: Option<MetricsWorker>
+    mw: Option<MetricsWorker>,
 }
 
 impl Foreign {
     pub fn new() -> Foreign {
         Foreign {
             events: None,
-            mw: None
+            mw: None,
         }
     }
 
@@ -141,14 +143,16 @@ impl Foreign {
         let events = Arc::new(Mutex::new(Events::new(event_info)));
         self.events = Some(events.clone());
         self.mw = Some(MetricsWorker::new(events));
-        logger().log(LogLevelFilter::Debug, "Initialized Metrics library in Foreign::init.");
+        logger().log(LogLevelFilter::Debug,
+                     "Initialized Metrics library in Foreign::init.");
     }
 
     pub fn record_event(&mut self,
                         event_category: &str,
                         event_action: &str,
                         event_label: &str,
-                        event_value: u64) -> bool {
+                        event_value: u64)
+                        -> bool {
         let ev: &Arc<Mutex<Events>> = match self.events {
             Some(ref v) => v,
             None => {

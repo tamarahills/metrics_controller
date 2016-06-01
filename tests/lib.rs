@@ -43,16 +43,16 @@ const KEY_CID:&'static str = "cid";
 #[test]
 fn test_thread_timer() {
     let mut controller = MetricsController::new(
-        "foxbox".to_string(),
-        "1.0".to_string(),
-        "default".to_string(),
-        "20160305".to_string(),
-        "en-us".to_string(),
-        "linux".to_string(),
-        "1.2.3.".to_string(),
-        "raspberry-pi".to_string(),
-        "arm".to_string(),
-        "rust".to_string());
+        "foxbox",
+        "1.0",
+        "default",
+        "20160305",
+        "en-us",
+        "linux",
+        "1.2.3.",
+        "raspberry-pi",
+        "arm",
+        "rust");
 
     controller.start_metrics();
 
@@ -135,9 +135,9 @@ fn test_cid_file_creation_and_proper_reuse() {
     let ei = get_event_info();
 
     let mut metrics_controller = MetricsController::new(
-        ei.app_name.to_string(), ei.app_version.to_string(), ei.app_update_channel.to_string(),
-        ei.app_build_id.to_string(), ei.app_platform.to_string(), ei.locale.to_string(),
-        ei.device.to_string(), ei.arch.to_string(), ei.os.to_string(), ei.os_version.to_string());
+        ei.app_name, ei.app_version, ei.app_update_channel,
+        ei.app_build_id, ei.app_platform, ei.locale,
+        ei.device, ei.arch, ei.os, ei.os_version);
 
     metrics_controller.record_event(event_category, event_action, event_label, event_value);
     let cid1 = read_client_id();
@@ -146,9 +146,9 @@ fn test_cid_file_creation_and_proper_reuse() {
     thread::sleep(std::time::Duration::from_secs(3));
     {
         let mut metrics_controller2 = MetricsController::new(
-            ei.app_name.to_string(), ei.app_version.to_string(), ei.app_update_channel.to_string(),
-            ei.app_build_id.to_string(), ei.app_platform.to_string(), ei.locale.to_string(),
-            ei.device.to_string(), ei.arch.to_string(), ei.os.to_string(), ei.os_version.to_string());
+            ei.app_name, ei.app_version, ei.app_update_channel,
+            ei.app_build_id, ei.app_platform, ei.locale,
+            ei.device, ei.arch, ei.os, ei.os_version);
 
         metrics_controller2.record_event(event_category, event_action, event_label, event_value);
         let cid2 = read_client_id();
@@ -209,9 +209,9 @@ fn test_max_body_size() {
     let ei = get_event_info();
 
     let mut metrics_controller = MetricsController::new(
-        ei.app_name.to_string(), ei.app_version.to_string(), ei.app_update_channel.to_string(),
-        ei.app_build_id.to_string(), ei.app_platform.to_string(), ei.locale.to_string(),
-        ei.device.to_string(), ei.arch.to_string(), ei.os.to_string(), ei.os_version.to_string());
+        ei.app_name, ei.app_version, ei.app_update_channel,
+        ei.app_build_id, ei.app_platform, ei.locale,
+        ei.device, ei.arch, ei.os, ei.os_version);
 
     for _ in 0.. 20 {
         metrics_controller.record_event(event_category, event_action, event_label, event_value);
@@ -262,9 +262,9 @@ fn test_google_analytics_received() {
     let ei = get_event_info();
 
     let mut metrics_controller = MetricsController::new(
-        ei.app_name.to_string(), ei.app_version.to_string(), ei.app_update_channel.to_string(),
-        ei.app_build_id.to_string(), ei.app_platform.to_string(), ei.locale.to_string(),
-        ei.device.to_string(), ei.arch.to_string(), ei.os.to_string(), ei.os_version.to_string());
+        ei.app_name, ei.app_version, ei.app_update_channel,
+        ei.app_build_id, ei.app_platform, ei.locale,
+        ei.device, ei.arch, ei.os, ei.os_version);
 
     // Test with the max payload number of events (20 hits can go in one POST request).
     for _ in 0 .. 20 {
