@@ -40,7 +40,9 @@ impl MetricsLogger {
     // information see:
     // http://rust-lang-nursery.github.io/log/env_logger/struct.LogBuilder.html
     pub fn init(&self) {
-        let format = |record: &LogRecord| format!("{} - {}", record.level(), record.args());
+        let format = |record: &LogRecord| {
+            format!("{} - {}", record.level(), record.args())
+        };
 
         let mut builder = LogBuilder::new();
 
@@ -61,7 +63,7 @@ impl MetricsLogger {
             LogLevelFilter::Info => info!("{} - {}", LOG_PREFIX, msg),
             LogLevelFilter::Debug => debug!("{} - {}", LOG_PREFIX, msg),
             LogLevelFilter::Error => error!("{} - {}", LOG_PREFIX, msg),
-            _ => println!("{} is not a supported log level", level),
+            _ => println!("{} is not a supported log level", level)
         }
     }
 }
