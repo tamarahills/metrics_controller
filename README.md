@@ -20,6 +20,15 @@ brew install openssl
 source tools/mac-os-x-setup.source.sh
 ```
 
+## Raspberry Pi
+To cross-compile the metrics library for Raspberry Pi:
+
+``` bash
+docker run -it russnicoletti/metrics_controller-pi
+cd metrics_controller
+cargopi
+```
+
 ## Logging
  The metrics library uses the `env_logger` package for logging functionality. Two notable features of this package
 are:
