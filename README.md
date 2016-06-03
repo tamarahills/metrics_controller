@@ -26,7 +26,7 @@ To cross-compile the metrics library for Raspberry Pi:
 ``` bash
 docker run -it russnicoletti/metrics_controller-pi
 cd metrics_controller
-cargopi
+cargopi build
 ```
 
 ## Logging
