@@ -149,7 +149,7 @@ impl MetricsController {
     ///
     /// *event_label* -- Description of what the metric is. For example, &apos;memory&apos;
     ///
-    /// *event_value* -- Numeric value of the metric.
+    /// *event_value* -- Numeric value of the metric. which is Integer
     ///
     /// Returns:
     ///
@@ -165,6 +165,19 @@ impl MetricsController {
         let mut events = self.events.lock().unwrap();
         events.insert_event(event_category, event_action, event_label, event_value)
     }
+}
+
+// create a record floating point event
+// event value is float
+pub fn record_floating_point_event(&mut self,
+                                   event_category: &str,
+                                   event_action: &str,
+                                   event_label: &str,
+                                   event_value: f64)
+                                   -> bool {
+    let mut events = self.events.lock().unwrap();
+    events.insert_floating_point_event(event_category, event_action, event_label, event_value)
+}
 }
 
 // Create a MetricsController with predefined values
