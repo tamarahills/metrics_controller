@@ -98,7 +98,7 @@ impl Events {
                                    self.encode_value(self.event_info.arch.clone()),
                                    self.encode_value(self.event_info.app_platform.clone()),
                                    self.encode_value(self.event_info.app_build_id.clone()),
-                                   self.encode_value(get_time_string())
+                                   self.encode_value(get_time_string()),
                                    event_value);
         logger().log(LogLevelFilter::Debug,
                      format!("Inserted event: {}", event_string).as_str());

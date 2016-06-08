@@ -165,7 +165,6 @@ impl MetricsController {
         let mut events = self.events.lock().unwrap();
         events.insert_event(event_category, event_action, event_label, event_value)
     }
-}
 
 /// Constructs a new event which is batched and sent to the Google Analytics
 /// server.
@@ -195,7 +194,7 @@ pub fn record_floating_point_event(&mut self,
     events.insert_floating_point_event(event_category, event_action, event_label, event_value)
 }
 
-
+}
 // Create a MetricsController with predefined values
 // for unit testing.
 //
