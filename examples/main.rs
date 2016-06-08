@@ -31,7 +31,7 @@ fn main() {
    metrics_controller.record_floating_point_event("event category",
                                                   "event action",
                                                   "event label",
-                                                  999999);
+                                                  999999.9);
 
     // This sleep is necessary so the main thread does not exit.
     thread::sleep(std::time::Duration::from_secs(20));
