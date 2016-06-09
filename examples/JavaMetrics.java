@@ -26,6 +26,8 @@ public class JavaMetrics {
                           String os_version);
         int record_event(String category, String action,
                          String label, int value);
+        int record_floating_point_event(String category, String action,
+                                        String label, float value);
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -41,6 +43,7 @@ public class JavaMetrics {
                                         "redhat");
       for (int i = 0; i < 5; i ++) {
           RustLibrary.INSTANCE.record_event("test", "click", "order", i);
+          RustLibrary.INSTANCE.record_floating_point_event("test", "click", "order", i * .1);
       }
       Thread.sleep(30000);
     }
