@@ -27,7 +27,7 @@ public class JavaMetrics {
         int record_event(String category, String action,
                          String label, int value);
         int record_floating_point_event(String category, String action,
-                                        String label, float value);
+                                        String label, double value);
     }
 
     public static void main(String[] args) throws InterruptedException {
