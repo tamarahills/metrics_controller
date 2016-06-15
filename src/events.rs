@@ -76,6 +76,37 @@ impl Events {
         true
     }
 
+    pub fn insert_floating_point_event(&mut self,
+                                       event_category: &str,
+                                       event_action: &str,
+                                       event_label: &str,
+                                       event_value: f64)
+                                       -> bool {
+
+        let event_string = format!("v=1&t=event&tid=UA-77033033-1&cid={0}&ec={1}&ea={2}&el={3}&ev={4}&an={5}&av={6}&ul={7}&cd1={8}&cd2={9}&cd3={10}&cd4={11}&cd5={12}&cd6={13}&cd7={14}&cd8={15}",
+                                   self.encode_value(self.client_id.clone()),
+                                   self.encode_value(event_category.to_string()),
+                                   self.encode_value(event_action.to_string()),
+                                   self.encode_value(event_label.to_string()),
+                                   1,
+                                   self.encode_value(self.event_info.app_name.clone()),
+                                   self.encode_value(self.event_info.app_version.clone()),
+                                   self.encode_value(self.event_info.locale.clone()),
+                                   self.encode_value(self.event_info.os.clone()),
+                                   self.encode_value(self.event_info.os_version.clone()),
+                                   self.encode_value(self.event_info.device.clone()),
+                                   self.encode_value(self.event_info.arch.clone()),
+                                   self.encode_value(self.event_info.app_platform.clone()),
+                                   self.encode_value(self.event_info.app_build_id.clone()),
+                                   self.encode_value(get_time_string()),
+                                   event_value);
+        logger().log(LogLevelFilter::Debug,
+                     format!("Inserted event: {}", event_string).as_str());
+        self.event_storage.push_back(event_string);
+
+        true
+    }
+
     fn encode_value(&self, value: String) -> String {
         let mut value_encoded = String::new();
         let value_vec = value.into_bytes();
@@ -250,4 +281,11 @@ describe! events_functionality {
         let body = ev.get_events_as_body();
         assert_eq!(body, formatted_body);
     }
+}
+#[cfg(test)]
+fn floating_point_events() -> String{
+        let floating_point_string = format!("v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
+                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456\
+                                &cd7=2016-05-25%2022:36:57&cd8=1\n");
+        floating_point_string
 }
