@@ -1,0 +1,14 @@
+{
+  "name": "cd-metrics-demo",
+  "private": false,
+  "version": "0.0.1",
+  "description": "Demonstration of node-based integration of cd-metrics",
+  "author": "Russ Nicoletti<rnicoletti@mozilla.com>",
+  "engineStrict": "true",
+  "engines": {
+    "node": "^4 || ^5"
+  },
+  "dependencies": {
+    "cd-metrics": "0.0.5"
+  }
+}
