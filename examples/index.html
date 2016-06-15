@@ -1,0 +1,37 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CD Metrics Javascript Integration Demo</title>
+  <script src="../dist/metrics.js"></script>
+  <script>
+  var logger = function() {
+    var args = Array.from(arguments); 
+    console.log(args.join(' '));
+  };
+
+  var clientId = 222219191919;
+  var options = {
+      locale: 'locale',
+      os: 'os',
+      os_version: 'os_version',
+      device: 'device',
+      app_name: 'app_name',
+      app_version: 'app_version',
+      app_update_channel: 'app_update_channel',
+      app_build_id: 'app_build_id',
+      app_platform: 'app_platform',
+      arch: 'arch',
+      logger: logger 
+  };
+  console.log("Instantiating Metrics object");
+  var metrics = new Metrics(clientId, options);
+
+  console.log("Recording event...");
+  metrics.recordEvent("category", "action", "label", 987654321);
+  </script>
+</head>
+<body>
+<h1>CD Metrics Javascript Integration Demo</h1>
+<p>Open Web Console to view logs...</p>
+</body>
+</html>

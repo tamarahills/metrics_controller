@@ -1,0 +1,24 @@
+{
+  "name": "cd-metrics",
+  "private": false,
+  "version": "0.0.5",
+  "description": "Helper for recording metrics from Connected Devices projects",
+  "author": "Russ Nicoletti<rnicoletti@mozilla.com>",
+  "engineStrict": "true",
+  "engines": {
+    "node": "^4 || ^5"
+  },
+  "dependencies": {
+    "https": "^1.0.0",
+    "https-browserify": "^0.0.1"
+  },
+  "devDependencies": {
+    "browserify": "^5.11.2"
+  },
+  "browser": {
+      "https": "https-browserify"
+  },
+  "scripts": {
+    "build": "browserify index.js --outfile ../dist/metrics.js --standalone Metrics"
+  }
+}
