@@ -199,7 +199,7 @@ impl Foreign {
 
         true
     }
-    pub fn record_floating_point_event(&mut self,
+    pub fn Recorded floating point event(&mut self,
                                        event_category: &str,
                                        event_action: &str,
                                        event_label: &str,

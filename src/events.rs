@@ -283,9 +283,23 @@ describe! events_functionality {
     }
 }
 #[cfg(test)]
-fn floating_point_events() -> String{
+fn floating_point_string() -> String{
         let floating_point_string = format!("v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
                                 &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456\
-                                &cd7=2016-05-25%2022:36:57&cd8=1\n");
+                                &cd7=2016-05-25%2022:36:57&cd8=1.0\n");
         floating_point_string
+}
+
+#[cfg(not(feature = "integration"))]
+#[cfg(test)]
+describe! floating_point_events {
+    it "should format the body correctly for one floating point event" {
+        let formatted_body = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
+                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456\
+                                &cd7=2016-05-25%2022:36:57&cd8=1.0\n";
+        ev.insert_event("category", "action", "label", 1.0);
+        ev.insert_event("category", "action", "label", 1.0);
+        let body = ev.get_events_as_body();
+        assert_eq!(body, formatted_body);
+    }
 }
