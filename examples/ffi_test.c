@@ -22,6 +22,8 @@ void init_metrics(const char* app_name,
                      const char* os_version);
 int record_event(const char* category, const char* action,
                      const char* label, int value);
+int record_floating_point_event(const char* category, const char* action,
+                                   const char* label, float value);
 
 int main() {
     init_metrics("myapp",
@@ -37,6 +39,7 @@ int main() {
 
     for(int i = 0; i < 21; i++) {
       record_event("test", "click", "order", i);
+      record_floating_point_event("test", "click", "order", i * .1);
       sleep(1);
     }
     sleep(45);

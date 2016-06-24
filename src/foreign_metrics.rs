@@ -111,6 +111,39 @@ pub extern "C" fn record_event(event_category: *const c_char,
                                             &event_label,
                                             event_value as u64)
 }
+/// Constructs a new event which is batched and sent to the Google Analytics
+/// server.
+///
+/// Params:
+///
+/// *event_category* -- Category of the event. For example, &apos;eng&apos; or &apos;user&apos;
+///
+/// *event_action* -- Action that the user took or what happened to trigger. For example, &apos;open-app&apos;
+///
+/// *event_label* -- Description of what the metric is. For example, &apos;memory&apos;
+///
+/// *event_value* -- Numeric value of the metric, which is a floating point.
+///
+/// Returns:
+///
+/// *true* - Success
+///
+/// *false* - Error, unable to record the event
+#[no_mangle]
+pub extern "C" fn record_floating_point_event(event_category: *const c_char,
+                                              event_action: *const c_char,
+                                              event_label: *const c_char,
+                                              event_value: f32)
+                                              -> bool {
+    let event_category = c_to_string(event_category);
+    let event_action = c_to_string(event_action);
+    let event_label = c_to_string(event_label);
+
+    CONTROLLER.lock().unwrap().record_floating_point_event(&event_category,
+                                                           &event_action,
+                                                           &event_label,
+                                                           event_value as f64)
+}
 
 fn c_to_string(cstr: *const c_char) -> String {
     unsafe {
@@ -163,6 +196,25 @@ impl Foreign {
         let mut events_mut = ev.lock().unwrap();
         events_mut.insert_event(event_category, event_action, event_label, event_value);
         logger().log(LogLevelFilter::Info, "Recorded event");
+
+        true
+    }
+    pub fn record_floating_point_event(&mut self,
+                                        event_category: &str,
+                                        event_action: &str,
+                                        event_label: &str,
+                                        event_value: f64)
+                                        -> bool {
+         let ev: &Arc<Mutex<Events>> = match self.events {
+             Some(ref v) => v,
+             None => {
+                 logger().log(LogLevelFilter::Error, "init_metrics has not been called");
+                 return false;
+             }
+         };
+         let mut events_mut = ev.lock().unwrap();
+         events_mut.insert_floating_point_event(event_category, event_action, event_label, event_value);
+         logger().log(LogLevelFilter::Info, "Recorded floating point event");
 
         true
     }
