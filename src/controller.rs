@@ -149,7 +149,7 @@ impl MetricsController {
     ///
     /// *event_label* -- Description of what the metric is. For example, &apos;memory&apos;
     ///
-    /// *event_value* -- Numeric value of the metric.
+    /// *event_value* -- Numeric value of the metric, which is an Integer
     ///
     /// Returns:
     ///
@@ -165,6 +165,34 @@ impl MetricsController {
         let mut events = self.events.lock().unwrap();
         events.insert_event(event_category, event_action, event_label, event_value)
     }
+
+   /// Constructs a new event which is batched and sent to the Google Analytics
+   /// server.
+   ///
+   /// Params:
+   ///
+  /// *event_category* -- Category of the event. For example, &apos;eng&apos; or &apos;user&apos;
+  ///
+  /// *event_action* -- Action that the user took or what happened to trigger. For example, &apos;open-app&apos;
+  ///
+  /// *event_label* -- Description of what the metric is. For example, &apos;memory&apos;
+  ///
+  /// *event_value* -- Numeric value of the metric, which is a floating point
+  ///
+  /// Returns:
+  ///
+  /// *true* - Success
+  ///
+  /// *false* - Error, unable to record the event
+  pub fn record_floating_point_event(&mut self,
+                                     event_category: &str,
+                                     event_action: &str,
+                                     event_label: &str,
+                                     event_value: f64)
+                                     -> bool {
+      let mut events = self.events.lock().unwrap();
+      events.insert_floating_point_event(event_category, event_action, event_label, event_value)
+      }
 }
 
 // Create a MetricsController with predefined values
