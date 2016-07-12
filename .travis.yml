@@ -7,7 +7,7 @@ dist: trusty
 
 language: rust
 rust:
-  - nightly-2016-07-02
+  - nightly-2016-07-12
 
 
 env:
