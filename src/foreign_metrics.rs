@@ -32,7 +32,7 @@ lazy_static! {
 /// # Examples
 ///
 /// ```ignore
-/// init_factory("myapp",
+/// init_metrics("myapp",
 ///         "1.0",
 ///         "default",
 ///         "20160303",
@@ -111,7 +111,7 @@ pub extern "C" fn record_event(event_category: *const c_char,
                                             &event_label,
                                             event_value as u64)
 }
-/// Constructs a new event which is batched and sent to the Google Analytics
+/// Constructs a new floating point event which is batched and sent to the Google Analytics
 /// server.
 ///
 /// Params:
