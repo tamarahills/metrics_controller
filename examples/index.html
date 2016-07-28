@@ -5,7 +5,7 @@
   <script src="../dist/metrics.js"></script>
   <script>
   var logger = function() {
-    var args = Array.from(arguments); 
+    var args = Array.from(arguments);
     console.log(args.join(' '));
   };
 
@@ -21,13 +21,14 @@
       app_build_id: 'app_build_id',
       app_platform: 'app_platform',
       arch: 'arch',
-      logger: logger 
+      logger: logger
   };
   console.log("Instantiating Metrics object");
   var metrics = new Metrics(clientId, options);
 
   console.log("Recording event...");
   metrics.recordEvent("category", "action", "label", 987654321);
+  metrics.recordFloatingPointEvent("category", "action", "label", 999999.9);
   </script>
 </head>
 <body>
