@@ -9,7 +9,7 @@
 * |cargo doc| -- creates 'rustdoc' documentation
 
 ## Toolchain
- run |multirust default nightly| then |multirust override nightly-2016-07-12| to make sure you have the correct rust version.
+ run |multirust default nightly| then |multirust override nightly-2016-07-25| to make sure you have the correct rust version.
 
 ## Extra steps for Mac OS X
 
