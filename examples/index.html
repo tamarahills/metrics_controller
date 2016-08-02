@@ -26,8 +26,9 @@
   console.log("Instantiating Metrics object");
   var metrics = new Metrics(clientId, options);
 
-  console.log("Recording event...");
-  metrics.recordEvent("category", "action", "label", 987654321);
+  console.log("Recording events...");
+  metrics.recordEventAsync("category", "action", "label", 987654321);
+  metrics.recordEvent("category", "action", "label", 987654322);
   metrics.recordFloatingPointEvent("category", "action", "label", 999999.9);
   </script>
 </head>

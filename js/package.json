@@ -1,7 +1,7 @@
 {
   "name": "cd-metrics",
   "private": false,
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Helper for recording metrics from Connected Devices projects",
   "author": "Russ Nicoletti<rnicoletti@mozilla.com>",
   "engineStrict": "true",
