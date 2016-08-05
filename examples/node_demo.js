@@ -1,4 +1,4 @@
-var Metrics = require('../js/index.js');
+var Metrics = require('cd-metrics');
 
   var logger = function() {
     var args = Array.from(arguments);
@@ -25,5 +25,6 @@ var Metrics = require('../js/index.js');
 
   process.stdout.write("Recording events...\n");
   metrics.recordEventAsync("category", "action", "label", 987654321);
+  metrics.recordFloatingPointEventAsync("category", "action", "label", 999999.8);
   metrics.recordEvent("category", "action", "label", 987654322);
   metrics.recordFloatingPointEvent("category", "action", "label", 999999.9);

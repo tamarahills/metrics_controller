@@ -149,13 +149,13 @@ Metrics.prototype = {
                              event_action,
                              event_label,
                              event_value);
-        }, 10);
+        }, 50);
     },
 
     recordFloatingPointEvent: function(event_category, // For example, 'eng', or 'user'
                                        event_action,   // Action that triggered event (e.g., 'open-app')
                                        event_label,    // Metric label (e.g., 'memory')
-                                       event_value) {  // Value of float (float)
+                                       event_value) {  // Value of metric (float)
         var self = this;
         var event_string = formatEventString();
         this.log("METRICS - event string:" + event_string);
@@ -241,6 +241,18 @@ Metrics.prototype = {
         }
     },
 
+    recordFloatingPointEventAsync: function(event_category, // For example, 'eng', or 'user'
+                                            event_action,   // Action that triggered event (e.g., 'open-app')
+                                            event_label,    // Metric label (e.g., 'memory')
+                                            event_value) {  // Value of metric (float)
+        var self = this;
+        setTimeout(function() {
+            self.recordFloatingPointEvent(event_category,
+                                          event_action,
+                                          event_label,
+                                          event_value);
+        }, 50);
+    },
     log: function(msg) {
         if (this.logger) {
             this.logger(msg);
@@ -250,6 +262,7 @@ Metrics.prototype = {
         }
     }
 };
+
 module.exports = Metrics;
 
 },{"https":11}],2:[function(require,module,exports){
