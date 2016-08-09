@@ -334,7 +334,6 @@ describe! metrics_worker {
             "app",
             "1.0",
             "default",
-            "20160305",
             "arm",
             "rust"
         );

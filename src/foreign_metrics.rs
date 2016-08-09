@@ -47,7 +47,6 @@ lazy_static! {
 pub extern "C" fn init_metrics(app_name: *const c_char,
                                app_version: *const c_char,
                                app_update_channel: *const c_char,
-                               app_build_id: *const c_char,
                                app_platform: *const c_char,
                                locale: *const c_char,
                                device: *const c_char,
@@ -57,7 +56,6 @@ pub extern "C" fn init_metrics(app_name: *const c_char,
     let app_name = c_to_string(app_name);
     let app_version = c_to_string(app_version);
     let app_update_channel = c_to_string(app_update_channel);
-    let app_build_id = c_to_string(app_build_id);
     let app_platform = c_to_string(app_platform);
     let locale = c_to_string(locale);
     let device = c_to_string(device);
@@ -71,7 +69,6 @@ pub extern "C" fn init_metrics(app_name: *const c_char,
                                        &app_name,
                                        &app_version,
                                        &app_update_channel,
-                                       &app_build_id,
                                        &app_platform,
                                        &arch);
     CONTROLLER.lock().unwrap().init(ev);

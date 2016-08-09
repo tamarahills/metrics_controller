@@ -15,7 +15,6 @@ fn main() {
         "foxbox",
         "1.0",
         "default",
-        "20160305",
         "rust",
         "en-us",
         "raspberry-pi",

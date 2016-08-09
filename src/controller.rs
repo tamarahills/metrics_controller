@@ -18,7 +18,6 @@ pub struct EventInfo {
     pub app_name: String,
     pub app_version: String,
     pub app_update_channel: String,
-    pub app_build_id: String,
     pub app_platform: String,
 }
 
@@ -30,7 +29,6 @@ impl EventInfo {
                app_name: &str,
                app_version: &str,
                app_update_channel: &str,
-               app_build_id: &str,
                app_platform: &str,
                arch: &str)
                -> EventInfo {
@@ -43,7 +41,6 @@ impl EventInfo {
             app_name: app_name.to_owned(),
             app_version: app_version.to_owned(),
             app_update_channel: app_update_channel.to_owned(),
-            app_build_id: app_build_id.to_owned(),
             app_platform: app_platform.to_owned(),
             arch: arch.to_owned(),
         }
@@ -83,7 +80,6 @@ impl MetricsController {
     pub fn new(app_name: &str,
                app_version: &str,
                app_update_channel: &str,
-               app_build_id: &str,
                app_platform: &str,
                locale: &str,
                device: &str,
@@ -99,7 +95,6 @@ impl MetricsController {
                                         app_name,
                                         app_version,
                                         app_update_channel,
-                                        app_build_id,
                                         app_platform,
                                         arch);
         let events = Arc::new(Mutex::new(Events::new(event_info)));

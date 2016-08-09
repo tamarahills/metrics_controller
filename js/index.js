@@ -25,7 +25,6 @@ const https = require("https");
  *   app_name:           Application name
  *   app_version:        Application version
  *   app_update_channel: Application update channel (e.g, nightly)
- *   app_build_id:       Application build Id
  *   app_platform:       Application platform
  *   arch:               Platform/device architecture
  */
@@ -38,7 +37,6 @@ function Metrics(clientId, options) {
     this.app_name = options.app_name || '';
     this.app_version = options.app_version || '';
     this.app_update_channel = options.app_update_channel || '';
-    this.app_build_id = options.app_build_id || '';
     this.app_platform = options.app_platform || '';
     this.arch = options.arch || '';
     this.logger = options.logger;
@@ -94,7 +92,6 @@ Metrics.prototype = {
             encodeURIComponent(self.app_name);
             encodeURIComponent(self.app_version);
             encodeURIComponent(self.app_update_channel);
-            encodeURIComponent(self.app_build_id);
             encodeURIComponent(self.app_platform);
             encodeURIComponent(self.arch);
 
@@ -111,7 +108,7 @@ Metrics.prototype = {
                                 '&cd3=' + self.device +
                                 '&cd4=' + self.arch +
                                 '&cd5=' + self.app_platform +
-                                '&cd6=' + self.app_build_id +
+                                '&cd6=' + self.clientId +
                                 '&cd7=' + getFormattedTime());
 
             return event_string;
@@ -195,7 +192,6 @@ Metrics.prototype = {
             encodeURIComponent(self.app_name);
             encodeURIComponent(self.app_version);
             encodeURIComponent(self.app_update_channel);
-            encodeURIComponent(self.app_build_id);
             encodeURIComponent(self.app_platform);
             encodeURIComponent(self.arch);
 
@@ -212,7 +208,7 @@ Metrics.prototype = {
                                 '&cd3=' + self.device +
                                 '&cd4=' + self.arch +
                                 '&cd5=' + self.app_platform +
-                                '&cd6=' + self.app_build_id +
+                                '&cd6=' + self.clientId +
                                 '&cd7=' + getFormattedTime()) +
                                 '&cd8=' + event_value ;
 

@@ -67,7 +67,7 @@ impl Events {
                                    self.encode_value(self.event_info.device.clone()),
                                    self.encode_value(self.event_info.arch.clone()),
                                    self.encode_value(self.event_info.app_platform.clone()),
-                                   self.encode_value(self.event_info.app_build_id.clone()),
+                                   self.encode_value(self.client_id.clone()),
                                    self.encode_value(get_time_string()));
         logger().log(LogLevelFilter::Debug,
                      format!("Inserted event: {}", event_string).as_str());
@@ -96,7 +96,7 @@ impl Events {
                                        self.encode_value(self.event_info.device.clone()),
                                        self.encode_value(self.event_info.arch.clone()),
                                        self.encode_value(self.event_info.app_platform.clone()),
-                                       self.encode_value(self.event_info.app_build_id.clone()),
+                                       self.encode_value(self.client_id.clone()),
                                        self.encode_value(get_time_string()),
                                        event_value);
             logger().log(LogLevelFilter::Debug,
@@ -207,7 +207,6 @@ describe! events_functionality {
                     "iot_app",
                     "1.0",
                     "default",
-                    "20160320123456",
                     "rust test",
                     "arm");
         let mut ev = Events::new(event_info);
@@ -220,7 +219,7 @@ describe! events_functionality {
 
     it "should format an event properly" {
         let formatted_event = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
-                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456\
+                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=9eccb690-93aa-4513-835a-9a4f0f0e2a71\
                                 &cd7=2016-05-25%2022:36:57";
         ev.insert_event("category", "action", "label", 1);
         assert_eq!(formatted_event, ev.event_storage.pop_front().unwrap());
@@ -260,7 +259,7 @@ describe! events_functionality {
 
     it "should format the body correctly for one event" {
         let formatted_body = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
-                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456\
+                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=9eccb690-93aa-4513-835a-9a4f0f0e2a71\
                                 &cd7=2016-05-25%2022:36:57\n";
         ev.insert_event("category", "action", "label", 1);
         let body = ev.get_events_as_body();
@@ -270,10 +269,10 @@ describe! events_functionality {
     it "should format the body correctly for multiple events" {
         let formatted_body = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
                                   &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test\
-                                  &cd6=20160320123456&cd7=2016-05-25%2022:36:57\n\
+                                  &cd6=9eccb690-93aa-4513-835a-9a4f0f0e2a71&cd7=2016-05-25%2022:36:57\n\
                               v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
                                   &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2\
-                                  &cd4=arm&cd5=rust%20test&cd6=20160320123456&cd7=2016-05-25%2022:36:57\n";
+                                  &cd4=arm&cd5=rust%20test&cd6=9eccb690-93aa-4513-835a-9a4f0f0e2a71&cd7=2016-05-25%2022:36:57\n";
         ev.insert_event("category", "action", "label", 1);
         ev.insert_event("category", "action", "label", 1);
         let body = ev.get_events_as_body();
@@ -282,7 +281,7 @@ describe! events_functionality {
 describe! events_functionality {
    it "should format the body correctly for one floating point event" {
        let formatted_body = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
-                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=20160320123456\
+                                &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=9eccb690-93aa-4513-835a-9a4f0f0e2a71\
                                 &cd7=2016-05-25%2022:36:57&cd8=1.000\n";
         ev.insert_floating_point_event("category", "action", "label", 1.0);
         let body = ev.get_events_as_body();

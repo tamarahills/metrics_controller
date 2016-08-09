@@ -14,7 +14,6 @@ var Metrics = require('cd-metrics');
       app_name: 'app_name',
       app_version: 'app_version',
       app_update_channel: 'app_update_channel',
-      app_build_id: 'app_build_id',
       app_platform: 'app_platform',
       arch: 'arch',
       logger: logger
