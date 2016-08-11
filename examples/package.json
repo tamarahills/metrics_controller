@@ -9,6 +9,6 @@
     "node": "^4 || ^5"
   },
   "dependencies": {
-    "cd-metrics": "0.0.9"
+    "cd-metrics": "0.0.10"
   }
 }

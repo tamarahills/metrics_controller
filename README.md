@@ -47,10 +47,20 @@ And, of course, to redirect the log messages to a file:
 
     CD_METRICS_LOG=info/CD-METRICS target/debug/examples/main 2> log
 
-## Javascript Wrapper
-  There is a Javascript wrapper called js/metrics.js that will facilitate metrics gathering for web based applications.
+## Javascript Implementations
+### Nodejs module
+  The `cd-metrics` nodejs module is the nodejs implementation of the CD metrics library. See **./examples/node_demo.js** for sample usage of the `cd-metrics` module.
 
-  To invoke the integration test:
+### Browser-based module
+  **./dist/metrics.js** is a browser-based javascript implementation of the CD metrics library. See **./examples/index.html** for sample usage.
+
+## Testing
+### Unit tests
+run `cargo test`
+
+### Integration tests
+   To run the integration test:
+
     1.  Install chai: |npm install chai|
     2.  Install mocha: |npm install mocha|
     3.  Load test/metrics_test.html in a browser.  
@@ -62,6 +72,6 @@ There is a C interface that can be used from C and Java applications.
 
 To utilize this:
   1.  Run |cargo build|
-  2.  This will create a target under ./target/debug/libmetrics_controller.dylib (Mac), .so (Linux), or .dll (Windows).
-  3.  Refer to ./examples/ffi_test.c for an example of how to invoke the library and for instructions to run
+  2.  This will create a target under **./target/debug/libmetrics_controller.dylib** (Mac), **.so** (Linux), or **.dll** (Windows).
+  3.  Refer to **./examples/ffi_test.c** for an example of how to invoke the library and for instructions to run
   the sample.
