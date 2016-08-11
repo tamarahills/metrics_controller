@@ -1,0 +1,3 @@
+{
+  "analytics": "<analytics Property ID>"
+}

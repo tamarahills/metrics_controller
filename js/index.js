@@ -10,6 +10,7 @@
  *
  */
 const https = require("https");
+var nconf = require('nconf');
 
 /*
  * Constructor - Metrics(clientId, options)
@@ -40,6 +41,16 @@ function Metrics(clientId, options) {
     this.app_platform = options.app_platform || '';
     this.arch = options.arch || '';
     this.logger = options.logger;
+
+    // Use nconf to get the configuration for different APIs we are using.
+    var configFile = __dirname + '/config.json';
+    this.log('config file: ' + configFile);
+
+    nconf.argv()
+       .env()
+       .file({ file: configFile });
+    this.analyticsProperty = nconf.get('analytics');
+    this.log('this.analyticsProperty ' + this.analyticsProperty);
 }
 
 Metrics.prototype = {
@@ -95,7 +106,8 @@ Metrics.prototype = {
             encodeURIComponent(self.app_platform);
             encodeURIComponent(self.arch);
 
-            var event_string = ('v=1&t=event&tid=UA-77033033-1&cid=' + self.clientId +
+            var event_string = ('v=1&t=event&tid=' + self.analyticsProperty +
+                                '&cid=' + self.clientId +
                                 '&ec=' + event_category +
                                 '&ea=' + event_action +
                                 '&el=' + event_label +
@@ -108,7 +120,8 @@ Metrics.prototype = {
                                 '&cd3=' + self.device +
                                 '&cd4=' + self.arch +
                                 '&cd5=' + self.app_platform +
-                                '&cd6=' + self.clientId +
+                                '&cd6=' + self.clientId + // Also store client id in cd6 because
+                                                          // cid value is mangled by GA
                                 '&cd7=' + getFormattedTime());
 
             return event_string;
@@ -195,7 +208,8 @@ Metrics.prototype = {
             encodeURIComponent(self.app_platform);
             encodeURIComponent(self.arch);
 
-            var event_string = ('v=1&t=event&tid=UA-77033033-1&cid=' + self.clientId +
+            var event_string = ('v=1&t=event&tid=' + self.analyticsProperty +
+                                '&cid=' + self.clientId +
                                 '&ec=' + event_category +
                                 '&ea=' + event_action +
                                 '&el=' + event_label +
@@ -208,7 +222,8 @@ Metrics.prototype = {
                                 '&cd3=' + self.device +
                                 '&cd4=' + self.arch +
                                 '&cd5=' + self.app_platform +
-                                '&cd6=' + self.clientId +
+                                '&cd6=' + self.clientId + // Also store client id in cd6 because
+                                                          // cid value is mangled by GA
                                 '&cd7=' + getFormattedTime()) +
                                 '&cd8=' + event_value ;
 
