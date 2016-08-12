@@ -62,8 +62,11 @@ Metrics.prototype = {
     recordEvent: function(event_category, // For example, 'eng', or 'user'
                           event_action,   // Action that triggered event (e.g., 'open-app')
                           event_label,    // Metric label (e.g., 'memory')
-                          event_value) {  // Value of metric (numeric)
+                          event_value,    // Value of metric (numeric)
+                          clientId) {     // Client id (optional)
+        var clientId = clientId || this.clientId;
         var self = this;
+
         var event_string = formatEventString();
         this.log("METRICS - event string:" + event_string);
         var post_options = {
@@ -95,6 +98,7 @@ Metrics.prototype = {
             encodeURIComponent(event_action);
             encodeURIComponent(event_label);
             encodeURIComponent(event_value);
+            encodeURIComponent(clientId);
 
             encodeURIComponent(self.locale);
             encodeURIComponent(self.os);
@@ -120,8 +124,8 @@ Metrics.prototype = {
                                 '&cd3=' + self.device +
                                 '&cd4=' + self.arch +
                                 '&cd5=' + self.app_platform +
-                                '&cd6=' + self.clientId + // Also store client id in cd6 because
-                                                          // cid value is mangled by GA
+                                '&cd6=' + clientId + // Also store client id in cd6 because
+                                                     // cid value is mangled by GA
                                 '&cd7=' + getFormattedTime());
 
             return event_string;
@@ -151,21 +155,27 @@ Metrics.prototype = {
     recordEventAsync: function(event_category, // For example, 'eng', or 'user'
                                event_action,   // Action that triggered event (e.g., 'open-app')
                                event_label,    // Metric label (e.g., 'memory')
-                               event_value) {  // Value of metric (numeric)
+                               event_value,    // Value of metric (numeric)
+                               clientId) {     // Client id (optional)
         var self = this;
+
         setTimeout(function() {
             self.recordEvent(event_category,
                              event_action,
                              event_label,
-                             event_value);
+                             event_value,
+                             clientId);
         }, 50);
     },
 
     recordFloatingPointEvent: function(event_category, // For example, 'eng', or 'user'
                                        event_action,   // Action that triggered event (e.g., 'open-app')
                                        event_label,    // Metric label (e.g., 'memory')
-                                       event_value) {  // Value of metric (float)
+                                       event_value,    // Value of metric (numeric)
+                                       clientId) {     // Client id (optional)
+        var clientId = clientId || this.clientId;
         var self = this;
+
         var event_string = formatEventString();
         this.log("METRICS - event string:" + event_string);
         var post_options = {
@@ -197,6 +207,7 @@ Metrics.prototype = {
             encodeURIComponent(event_action);
             encodeURIComponent(event_label);
             encodeURIComponent(event_value);
+            encodeURIComponent(clientId);
 
             encodeURIComponent(self.locale);
             encodeURIComponent(self.os);
@@ -222,8 +233,8 @@ Metrics.prototype = {
                                 '&cd3=' + self.device +
                                 '&cd4=' + self.arch +
                                 '&cd5=' + self.app_platform +
-                                '&cd6=' + self.clientId + // Also store client id in cd6 because
-                                                          // cid value is mangled by GA
+                                '&cd6=' + clientId + // Also store client id in cd6 because
+                                                     // cid value is mangled by GA
                                 '&cd7=' + getFormattedTime()) +
                                 '&cd8=' + event_value ;
 
@@ -254,13 +265,16 @@ Metrics.prototype = {
     recordFloatingPointEventAsync: function(event_category, // For example, 'eng', or 'user'
                                             event_action,   // Action that triggered event (e.g., 'open-app')
                                             event_label,    // Metric label (e.g., 'memory')
-                                            event_value) {  // Value of metric (float)
+                                            event_value,    // Value of metric (numeric)
+                                            clientId) {     // Client id (optional)
         var self = this;
+
         setTimeout(function() {
             self.recordFloatingPointEvent(event_category,
                                           event_action,
                                           event_label,
-                                          event_value);
+                                          event_value,
+                                          clientId);
         }, 50);
     },
     log: function(msg) {

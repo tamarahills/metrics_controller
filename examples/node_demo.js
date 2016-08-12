@@ -24,6 +24,10 @@ var Metrics = require('cd-metrics');
 
   process.stdout.write("Recording events...\n");
   metrics.recordEventAsync("category", "action", "label", 987654321);
-  metrics.recordFloatingPointEventAsync("category", "action", "label", 999999.8);
-  metrics.recordEvent("category", "action", "label", 987654322);
-  metrics.recordFloatingPointEvent("category", "action", "label", 999999.9);
+  metrics.recordEventAsync("category", "action", "label", 987654322, 'client id');
+  metrics.recordFloatingPointEventAsync("category", "action", "label", 999999.1);
+  metrics.recordFloatingPointEventAsync("category", "action", "label", 999999.2, 'client id');
+  metrics.recordEvent("category", "action", "label", 987654323);
+  metrics.recordEvent("category", "action", "label", 987654324, 'client id');
+  metrics.recordFloatingPointEvent("category", "action", "label", 999999.3);
+  metrics.recordFloatingPointEvent("category", "action", "label", 999999.4, 'client id');
