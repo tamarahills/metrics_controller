@@ -27,7 +27,6 @@ impl Config {
         Config { parsed_json: None }
     }
 
-    #[cfg(not(test))]
     pub fn create_and_write_json(&mut self, file_name: &str, json: &str) {
         logger().log(LogLevelFilter::Debug,
                      format!("file: {}", file_name).as_str());
@@ -95,14 +94,15 @@ impl Config {
 
     pub fn get_string(&mut self, key: &str) -> String {
         if let Some(ref mut parsed_json) = self.parsed_json {
-            let val: Option<Value> = Some(parsed_json.get(key).unwrap().clone());
+            let val = parsed_json.get(key);
             match val {
                 Some(v) => {
-                    match v {
-                        Value::String(v) => v.clone(),
+                    let nv = v.clone();
+                    match nv {
+                        Value::String(nv) => nv.clone(),
                         _ => panic!("Expected a String Value"),
                     }
-                }
+                },
                 None => panic!("Value not found"),
             }
         } else {
@@ -111,15 +111,17 @@ impl Config {
     }
 
     pub fn get_u64(&mut self, key: &str) -> u64 {
+        println!("Getting u64 value for {}", key);
         if let Some(ref mut parsed_json) = self.parsed_json {
-            let val: Option<Value> = Some(parsed_json.get(key).unwrap().clone());
+            let val = parsed_json.get(key);
             match val {
                 Some(v) => {
-                    match v {
-                        Value::U64(v) => return v,
+                    let nv = v.clone();
+                    match nv {
+                        Value::U64(nv) => nv.clone(),
                         _ => panic!("Expected a u64"),
                     }
-                }
+                },
                 None => panic!("Value not found"),
             }
         } else {
@@ -133,14 +135,23 @@ impl Config {
 #[cfg(test)]
 describe! config_file_found {
     it "should open the config file when it exists" {
+        use std::fs;
         let mut cfg = Config::new();
-        let found = cfg.init("metricsconfig.json");
+        // Create sample config file
+        let file = "test.json";
+        cfg.create_and_write_json(file, "{\"cid\": \"123456\"}");
+        let found = cfg.init(file);
+        // No longer need the sample config file, delete it
+        match fs::remove_file(file) {
+          Ok(_) => println!("deleted file {}", file),
+          Err(e) => println!("Error deleting {}: {}", file, e)
+        }
         assert_eq!(found, true);
     }
 
     it "should return false if config file not found" {
         let mut cfg = Config::new();
-        let found = cfg.init("test.json");
+        let found = cfg.init("nosuchfile.json");
         assert_eq!(found, false);
     }
 }

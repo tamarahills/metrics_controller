@@ -1,6 +1,0 @@
-{
-	"sendInterval": 10,
-	"saveInterval": 2,
-	"startTime": 0,
-	"savePath": "/Volumes/development/metrics_controller/"
-}

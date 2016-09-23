@@ -3,8 +3,6 @@ extern crate time;
 extern crate timer;
 extern crate serde_json;
 
-use self::serde_json::Value;
-use config::Config;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
 use logger::MetricsLogger;
@@ -23,9 +21,6 @@ const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
 const DEFAULT_SEND: u64 = 1209600;
 const DEFAULT_SAVE: u64 = 3600;
 const DEFAULT_START: u64 = 0;
-const KEY_START: &'static str = "startTime";
-const KEY_SAVE: &'static str = "saveInterval";
-const KEY_SEND: &'static str = "sendInterval";
 
 pub enum TimerOp {
     Send,
@@ -55,19 +50,8 @@ impl MetricsTimer {
     }
 
     fn init(&mut self) {
-        let mut cfg = Config::new();
-        cfg.init("metricsconfig.json");
-        self.send_interval = cfg.get_u64(KEY_SEND);
-        self.save_interval = cfg.get_u64(KEY_SAVE);
+        self.init_from_config();
 
-        // The startTime is a special case and could be empty initially.
-        let val: Option<Value> = cfg.get(KEY_START);
-        match val {
-            Some(_) => self.start_time = cfg.get_u64(KEY_START),
-            None => {
-                self.start_time = 0;
-            }
-        }
         if self.save_interval >= self.send_interval {
             panic!("Fatal error.  Sending interval < Saving Interval")
         }
@@ -108,6 +92,37 @@ impl MetricsTimer {
                 return TimerOp::Save;
             }
         }
+    }
+
+    #[cfg(not(test))]
+    fn init_from_config(&mut self) {
+        use config::Config;
+        use self::serde_json::Value;
+
+        const KEY_START: &'static str = "startTime";
+        const KEY_SAVE: &'static str = "saveInterval";
+        const KEY_SEND: &'static str = "sendInterval";
+
+        let mut cfg = Config::new();
+        cfg.init("metricsconfig.json");
+        self.send_interval = cfg.get_u64(KEY_SEND);
+        self.save_interval = cfg.get_u64(KEY_SAVE);
+
+        // The startTime is a special case and could be empty initially.
+        let val: Option<Value> = cfg.get(KEY_START);
+        match val {
+            Some(_) => self.start_time = cfg.get_u64(KEY_START),
+            None => {
+                self.start_time = 0;
+            }
+        }
+    }
+
+    #[cfg(test)]
+    fn init_from_config(&mut self) {
+        self.send_interval = DEFAULT_SEND;
+        self.save_interval = DEFAULT_SAVE;
+        self.start_time = DEFAULT_START;
     }
 }
 
@@ -337,12 +352,12 @@ describe! metrics_worker {
             "arm",
             "rust"
         );
-        let mut mw = MetricsWorker::new(Arc::new(Mutex::new(Events::new(event_info))));
+        let mw = MetricsWorker::new(Arc::new(Mutex::new(Events::new(event_info, "CD_ap".to_string()))));
     }
 
     it "should gracefully exit when quit is sent" {
         mw.quit();
-        mw.join_handle.take().unwrap().join().unwrap();
+        mw.join_handle.unwrap().join().unwrap();
         assert!(true);
     }
 }

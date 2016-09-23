@@ -5,6 +5,7 @@
 //
 
 use metrics_worker::MetricsWorker;
+use config::Config;
 use events::Events;
 use log::LogLevelFilter;
 use logger::MetricsLoggerFactory;
@@ -14,6 +15,8 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::str::from_utf8;
 use controller::EventInfo;
+
+const ANALYTICS_KEY: &'static str = "analytics";
 
 #[allow(non_upper_case_globals)]
 const logger: fn() -> &'static MetricsLogger = MetricsLoggerFactory::get_logger;
@@ -170,7 +173,11 @@ impl Foreign {
     }
 
     pub fn init(&mut self, event_info: EventInfo) {
-        let events = Arc::new(Mutex::new(Events::new(event_info)));
+        let mut cfg = Config::new();
+        cfg.init("metricsconfig.json");
+        let analytics_property = cfg.get_string(ANALYTICS_KEY);
+
+        let events = Arc::new(Mutex::new(Events::new(event_info, analytics_property)));
         self.events = Some(events.clone());
         self.mw = Some(MetricsWorker::new(events));
         logger().log(LogLevelFilter::Debug,
