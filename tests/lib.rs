@@ -38,21 +38,25 @@ use self::uuid::Uuid;
 #[allow(dead_code)]
 const KEY_CID:&'static str = "cid";
 
-
 #[cfg(feature = "integration")]
 #[test]
 fn test_thread_timer() {
+
+    // make sure we are starting with no files created.
+    delete_file("integration1.dat");
+    delete_file("cid.dat");
+
+    create_config("metricsconfig.json");
     let mut controller = MetricsController::new(
         "foxbox",
         "1.0",
         "default",
-        "20160305",
+        "rust",
         "en-us",
-        "linux",
-        "1.2.3.",
         "raspberry-pi",
         "arm",
-        "rust");
+        "linux",
+        "1.2.3.");
 
     controller.start_metrics();
 
@@ -87,6 +91,10 @@ fn test_thread_timer() {
         Err(why) => panic!("couldn't delete: {}", Error::description(&why)),
         Ok(_) => println!("deleted"),
     }
+
+    // Clean up any side effects of the test.
+    delete_file("integration1.dat");
+    delete_file("cid.dat");
 }
 
 #[cfg(feature = "integration")]
@@ -134,10 +142,11 @@ fn test_cid_file_creation_and_proper_reuse() {
     let event_value        = 999999;
     let ei = get_event_info();
 
+    create_config("metricsconfig.json");
     let mut metrics_controller = MetricsController::new(
         ei.app_name, ei.app_version, ei.app_update_channel,
-        ei.app_build_id, ei.app_platform, ei.locale,
-        ei.device, ei.arch, ei.os, ei.os_version);
+        ei.app_platform, ei.locale, ei.device, ei.arch, ei.os,
+        ei.os_version);
 
     metrics_controller.record_event(event_category, event_action, event_label, event_value);
     let cid1 = read_client_id();
@@ -147,8 +156,8 @@ fn test_cid_file_creation_and_proper_reuse() {
     {
         let mut metrics_controller2 = MetricsController::new(
             ei.app_name, ei.app_version, ei.app_update_channel,
-            ei.app_build_id, ei.app_platform, ei.locale,
-            ei.device, ei.arch, ei.os, ei.os_version);
+            ei.app_platform, ei.locale, ei.device, ei.arch, ei.os,
+            ei.os_version);
 
         metrics_controller2.record_event(event_category, event_action, event_label, event_value);
         let cid2 = read_client_id();
@@ -163,9 +172,9 @@ fn test_cid_file_creation_and_proper_reuse() {
 
     let expected_body = format!(
         "v=1&t=event&tid=UA-77033033-1&cid={0}&ec=event%20category&ea=event%20action&el=event%20label&ev={1}\
-         &an={2}&av={3}&ul={4}&cd1={5}&cd2={6}&cd3={7}&cd4={8}&cd5={9}&cd6={10}",
+         &an={2}&av={3}&ul={4}&cd1={5}&cd2={6}&cd3={7}&cd4={8}&cd5={9}",
          cid1, event_value, ei.app_name, ei.app_version, ei.locale, ei.os, ei.os_version,
-         ei.device, ei.arch, ei.app_platform, ei.app_build_id
+         ei.device, ei.arch, ei.app_platform
     );
 
     let path = Path::new("integration1.dat");
@@ -186,6 +195,9 @@ fn test_cid_file_creation_and_proper_reuse() {
     }
     let s_slice: &str = &s[..];
     let e_slice: &str = &expected_body[..];
+    println!("s_slice: {}", s_slice);
+    println!("e_slice: {}", e_slice);
+
     assert_eq!(s_slice.find(e_slice), Some(0));
 
     // Clean up any side effects of the test.
@@ -208,10 +220,11 @@ fn test_max_body_size() {
     let event_value        = 999999;
     let ei = get_event_info();
 
+    create_config("metricsconfig.json");
     let mut metrics_controller = MetricsController::new(
         ei.app_name, ei.app_version, ei.app_update_channel,
-        ei.app_build_id, ei.app_platform, ei.locale,
-        ei.device, ei.arch, ei.os, ei.os_version);
+        ei.app_platform, ei.locale, ei.device, ei.arch, ei.os,
+        ei.os_version);
 
     for _ in 0.. 20 {
         metrics_controller.record_event(event_category, event_action, event_label, event_value);
@@ -261,10 +274,11 @@ fn test_google_analytics_received() {
     let event_value        = 5;
     let ei = get_event_info();
 
+    create_config("metricsconfig.json");
     let mut metrics_controller = MetricsController::new(
         ei.app_name, ei.app_version, ei.app_update_channel,
-        ei.app_build_id, ei.app_platform, ei.locale,
-        ei.device, ei.arch, ei.os, ei.os_version);
+        ei.app_platform, ei.locale, ei.device, ei.arch, ei.os,
+        ei.os_version);
 
     // Test with the max payload number of events (20 hits can go in one POST request).
     for _ in 0 .. 20 {
@@ -378,3 +392,12 @@ fn delete_file(file_name: &str) {
         Ok(_) => println!("deleted"),
     }
 }
+
+#[cfg(feature = "integration")]
+fn create_config(file_name: &str) {
+    let json = "{\"sendInterval\": 10, \"saveInterval\": 2, \"analytics\": \"UA-77033033-1\"}";
+
+    let mut cfg = Config::new();
+    cfg.create_and_write_json(file_name, json);
+}
+

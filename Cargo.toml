@@ -23,9 +23,9 @@ crate-type = ["dylib", "rlib"]
 
 [dependencies]
 chrono = "0.2.19"
-serde = "0.7.0"
-serde_json = "0.7.0"
-serde_macros = "0.7.2"
+serde = "0.8.9"
+serde_json = "0.8.2"
+serde_macros = "0.8.9"
 hyper = "0.7.2"
 uuid = "0.1.18"
 time = "0.1"

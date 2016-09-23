@@ -35,14 +35,16 @@ pub struct Events {
     event_storage: VecDeque<String>,
     event_info: EventInfo,
     client_id: String,
+    analytics_property: String
 }
 
 impl Events {
-    pub fn new(event_info: EventInfo) -> Events {
+    pub fn new(event_info: EventInfo, analytics_property: String) -> Events {
         Events {
             event_storage: VecDeque::with_capacity(20),
             event_info: event_info,
             client_id: get_client_id(),
+            analytics_property: analytics_property
         }
     }
 
@@ -53,7 +55,8 @@ impl Events {
                         event_value: u64)
                         -> bool {
 
-        let event_string = format!("v=1&t=event&tid=UA-77033033-1&cid={0}&ec={1}&ea={2}&el={3}&ev={4}&an={5}&av={6}&ul={7}&cd1={8}&cd2={9}&cd3={10}&cd4={11}&cd5={12}&cd6={13}&cd7={14}",
+        let event_string = format!("v=1&t=event&tid={0}&cid={1}&ec={2}&ea={3}&el={4}&ev={5}&an={6}&av={7}&ul={8}&cd1={9}&cd2={10}&cd3={11}&cd4={12}&cd5={13}&cd6={14}&cd7={15}",
+                                   self.analytics_property.clone(),
                                    self.encode_value(self.client_id.clone()),
                                    self.encode_value(event_category.to_string()),
                                    self.encode_value(event_action.to_string()),
@@ -82,7 +85,8 @@ impl Events {
                                            event_value: f64)
                                            -> bool {
 
-            let event_string = format!("v=1&t=event&tid=UA-77033033-1&cid={0}&ec={1}&ea={2}&el={3}&ev={4}&an={5}&av={6}&ul={7}&cd1={8}&cd2={9}&cd3={10}&cd4={11}&cd5={12}&cd6={13}&cd7={14}&cd8={15:.3}",
+            let event_string = format!("v=1&t=event&tid={0}&cid={1}&ec={2}&ea={3}&el={4}&ev={5}&an={6}&av={7}&ul={8}&cd1={9}&cd2={10}&cd3={11}&cd4={12}&cd5={13}&cd6={14}&cd7={15}&cd8={16:.3}",
+                                       self.analytics_property.clone(),
                                        self.encode_value(self.client_id.clone()),
                                        self.encode_value(event_category.to_string()),
                                        self.encode_value(event_action.to_string()),
@@ -209,7 +213,7 @@ describe! events_functionality {
                     "default",
                     "rust test",
                     "arm");
-        let mut ev = Events::new(event_info);
+        let mut ev = Events::new(event_info, "CD_ap".to_string());
         ev.client_id = "9eccb690-93aa-4513-835a-9a4f0f0e2a71".to_string();
     }
     it "should insert an event" {
@@ -218,7 +222,7 @@ describe! events_functionality {
     }
 
     it "should format an event properly" {
-        let formatted_event = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
+        let formatted_event = "v=1&t=event&tid=CD_ap&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
                                 &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=9eccb690-93aa-4513-835a-9a4f0f0e2a71\
                                 &cd7=2016-05-25%2022:36:57";
         ev.insert_event("category", "action", "label", 1);
@@ -258,7 +262,7 @@ describe! events_functionality {
     }
 
     it "should format the body correctly for one event" {
-        let formatted_body = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
+        let formatted_body = "v=1&t=event&tid=CD_ap&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
                                 &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=9eccb690-93aa-4513-835a-9a4f0f0e2a71\
                                 &cd7=2016-05-25%2022:36:57\n";
         ev.insert_event("category", "action", "label", 1);
@@ -267,10 +271,10 @@ describe! events_functionality {
     }
 
     it "should format the body correctly for multiple events" {
-        let formatted_body = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
+        let formatted_body = "v=1&t=event&tid=CD_ap&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
                                   &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test\
                                   &cd6=9eccb690-93aa-4513-835a-9a4f0f0e2a71&cd7=2016-05-25%2022:36:57\n\
-                              v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
+                              v=1&t=event&tid=CD_ap&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
                                   &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2\
                                   &cd4=arm&cd5=rust%20test&cd6=9eccb690-93aa-4513-835a-9a4f0f0e2a71&cd7=2016-05-25%2022:36:57\n";
         ev.insert_event("category", "action", "label", 1);
@@ -280,7 +284,7 @@ describe! events_functionality {
     }
 describe! events_functionality {
    it "should format the body correctly for one floating point event" {
-       let formatted_body = "v=1&t=event&tid=UA-77033033-1&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
+       let formatted_body = "v=1&t=event&tid=CD_ap&cid=9eccb690-93aa-4513-835a-9a4f0f0e2a71&ec=category&ea=action\
                                 &el=label&ev=1&an=iot_app&av=1.0&ul=en-us&cd1=linux&cd2=1.2&cd3=RPi%2F2&cd4=arm&cd5=rust%20test&cd6=9eccb690-93aa-4513-835a-9a4f0f0e2a71\
                                 &cd7=2016-05-25%2022:36:57&cd8=1.000\n";
         ev.insert_floating_point_event("category", "action", "label", 1.0);

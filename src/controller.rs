@@ -42,8 +42,26 @@ impl EventInfo {
             app_version: app_version.to_owned(),
             app_update_channel: app_update_channel.to_owned(),
             app_platform: app_platform.to_owned(),
-            arch: arch.to_owned(),
+            arch: arch.to_owned()
         }
+    }
+}
+
+pub struct AnalyticsProperty;
+
+impl AnalyticsProperty {
+    #[cfg(not(test))]
+    pub fn get() -> String {
+        use config::Config;
+        const ANALYTICS_KEY: &'static str = "analytics";
+
+        let mut cfg = Config::new();
+        cfg.init("metricsconfig.json");
+        cfg.get_string(ANALYTICS_KEY)
+    }
+    #[cfg(test)]
+    pub fn get() -> String {
+        "test_analytics_property".to_string()
     }
 }
 
@@ -88,6 +106,9 @@ impl MetricsController {
                os_version: &str)
                -> MetricsController {
         logger().log(LogLevelFilter::Info, "Creating Controller");
+
+        let analytics_property = AnalyticsProperty::get();
+
         let event_info = EventInfo::new(locale,
                                         os,
                                         os_version,
@@ -97,12 +118,13 @@ impl MetricsController {
                                         app_update_channel,
                                         app_platform,
                                         arch);
-        let events = Arc::new(Mutex::new(Events::new(event_info)));
+        let events = Arc::new(Mutex::new(Events::new(event_info, analytics_property)));
 
         MetricsController {
             events: events.clone(),
             mw: MetricsWorker::new(events),
         }
+
     }
 
     // TODO determine if we still want this function
@@ -187,27 +209,6 @@ impl MetricsController {
                                      -> bool {
       let mut events = self.events.lock().unwrap();
       events.insert_floating_point_event(event_category, event_action, event_label, event_value)
-      }
-}
+  }
 
-// Create a MetricsController with predefined values
-// for unit testing.
-//
-// TODO This function is commented out because it is not being used.
-//      Uncomment when there are unit tests that need it.
-// #[cfg(test)]
-// fn create_metrics_controller() -> MetricsController {
-// MetricsController::new(
-// "app",
-// "1.0",
-// "default",
-// "20160305",
-// "rust",
-// "en-us",
-// "linux",
-// "1.2.3",
-// "raspberry-pi",
-// "arm"
-// )
-// }
-//
+}
