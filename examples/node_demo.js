@@ -9,12 +9,12 @@ var Metrics = require('cd-metrics');
   var options = {
       locale: 'locale',
       os: 'os',
-      os_version: 'os_version',
+      osVersion: 'osVersion',
       device: 'device',
-      app_name: 'app_name',
-      app_version: 'app_version',
-      app_update_channel: 'app_update_channel',
-      app_platform: 'app_platform',
+      appName: 'appName',
+      appVersion: 'appVersion',
+      appUpdateChannel: 'app_update_channel',
+      appPlatform: 'appPlatform',
       arch: 'arch',
       logger: logger
   };

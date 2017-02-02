@@ -33,12 +33,12 @@ function Metrics(clientId, options) {
     this.clientId = clientId;
     this.locale = options.locale || '';
     this.os = options.os || '';
-    this.os_version = options.os_version || '';
+    this.osVersion = options.osVersion || '';
     this.device = options.device || '';
-    this.app_name = options.app_name || '';
-    this.app_version = options.app_version || '';
-    this.app_update_channel = options.app_update_channel || '';
-    this.app_platform = options.app_platform || '';
+    this.appName = options.appName || '';
+    this.appVersion = options.appVersion || '';
+    this.appUpdateChannel = options.app_update_channel || '';
+    this.appPlatform = options.appPlatform || '';
     this.arch = options.arch || '';
     this.logger = options.logger;
 
@@ -102,12 +102,12 @@ Metrics.prototype = {
 
             encodeURIComponent(self.locale);
             encodeURIComponent(self.os);
-            encodeURIComponent(self.os_version);
+            encodeURIComponent(self.osVersion);
             encodeURIComponent(self.device);
-            encodeURIComponent(self.app_name);
-            encodeURIComponent(self.app_version);
-            encodeURIComponent(self.app_update_channel);
-            encodeURIComponent(self.app_platform);
+            encodeURIComponent(self.appName);
+            encodeURIComponent(self.appVersion);
+            encodeURIComponent(self.appUpdate_channel);
+            encodeURIComponent(self.appPlatform);
             encodeURIComponent(self.arch);
 
             var event_string = ('v=1&t=event&tid=' + self.analyticsProperty +
@@ -116,14 +116,14 @@ Metrics.prototype = {
                                 '&ea=' + event_action +
                                 '&el=' + event_label +
                                 '&ev=' + event_value +
-                                '&an=' + self.app_name +
-                                '&av=' + self.app_version +
+                                '&an=' + self.appName +
+                                '&av=' + self.appVersion +
                                 '&ul=' + self.locale +
                                 '&cd1=' + self.os +
-                                '&cd2=' + self.os_version +
+                                '&cd2=' + self.osVersion +
                                 '&cd3=' + self.device +
                                 '&cd4=' + self.arch +
-                                '&cd5=' + self.app_platform +
+                                '&cd5=' + self.appPlatform +
                                 '&cd6=' + clientId + // Also store client id in cd6 because
                                                      // cid value is mangled by GA
                                 '&cd7=' + getFormattedTime());
@@ -211,12 +211,12 @@ Metrics.prototype = {
 
             encodeURIComponent(self.locale);
             encodeURIComponent(self.os);
-            encodeURIComponent(self.os_version);
+            encodeURIComponent(self.osVersion);
             encodeURIComponent(self.device);
-            encodeURIComponent(self.app_name);
-            encodeURIComponent(self.app_version);
-            encodeURIComponent(self.app_update_channel);
-            encodeURIComponent(self.app_platform);
+            encodeURIComponent(self.appName);
+            encodeURIComponent(self.appVersion);
+            encodeURIComponent(self.appUpdate_channel);
+            encodeURIComponent(self.appPlatform);
             encodeURIComponent(self.arch);
 
             var event_string = ('v=1&t=event&tid=' + self.analyticsProperty +
@@ -225,14 +225,14 @@ Metrics.prototype = {
                                 '&ea=' + event_action +
                                 '&el=' + event_label +
                                 '&ev=' + 1 +
-                                '&an=' + self.app_name +
-                                '&av=' + self.app_version +
+                                '&an=' + self.appName +
+                                '&av=' + self.appVersion +
                                 '&ul=' + self.locale +
                                 '&cd1=' + self.os +
-                                '&cd2=' + self.os_version +
+                                '&cd2=' + self.osVersion +
                                 '&cd3=' + self.device +
                                 '&cd4=' + self.arch +
-                                '&cd5=' + self.app_platform +
+                                '&cd5=' + self.appPlatform +
                                 '&cd6=' + clientId + // Also store client id in cd6 because
                                                      // cid value is mangled by GA
                                 '&cd7=' + getFormattedTime()) +
