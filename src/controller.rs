@@ -75,7 +75,7 @@ impl MetricsController {
     //  Note: The following code example produces an 'unused variable' warning
     //        so it is being ignored for the purpose of running tests.
 
-    /// Constructs a new `MetricsController`. Caller passes information
+    /// Constructs a new `MetricsController` object. The caller passes information
     /// about their application and environment. This information will be associated
     /// with the metrics data recorded by the `record_event` function.
     ///
@@ -128,10 +128,10 @@ impl MetricsController {
     }
 
     // TODO determine if we still want this function
-    /// This function is called to start the metrics service.  It also starts the
+    /// This function starts the metrics service, which also starts the
     /// worker thread needed to operate the metrics service.  The worker thread
-    /// is responsible for periodically: persisting the histogram data and
-    /// transmitting it to the telemetry server.
+    /// is responsible for periodically persisting the metrics data and
+    /// transmitting it to the server.
     pub fn start_metrics(&mut self) -> bool {
 
         // Data needs to be read from disk here.  Let's assume that the controller
@@ -147,7 +147,7 @@ impl MetricsController {
     }
 
     // TODO determine if we still want this function
-    /// Stops the metrics service and deletes metrics data that has been collected
+    /// This function stops the metrics service and deletes metrics data that has been collected
     /// but not sent to the server.
     pub fn stop_collecting(&mut self) {
         // TODO:  Eventually, this API will need to also delete the Histograms
@@ -155,24 +155,24 @@ impl MetricsController {
         self.mw.quit();
     }
 
-    /// Constructs a new event which is batched and sent to the Google Analytics
-    /// server.
+    /// Constructs and records an event. The recorded events are sent to the server based on an internal
+    /// schedule (when twenty events are recorded). Currently, this schedule is not configurable.
     ///
     /// Params:
     ///
-    /// *event_category* -- Category of the event. For example, &apos;eng&apos; or &apos;user&apos;
+    /// **event_category** - Category of the event. For example, `eng` or `user`
     ///
-    /// *event_action* -- Action that the user took or what happened to trigger. For example, &apos;open-app&apos;
+    /// **event_action** - Action that triggered the event. For example, `open-app`
     ///
-    /// *event_label* -- Description of what the metric is. For example, &apos;memory&apos;
+    /// **event_label** - Label, or description, of the metric. For example, `memory`
     ///
-    /// *event_value* -- Numeric value of the metric, which is an Integer
+    /// **event_value** - Numeric value of the metric.
     ///
     /// Returns:
     ///
-    /// *true* - Success
+    /// **true** - Success
     ///
-    /// *false* - Error, unable to record the event
+    /// **false** - Unable to record the event
     pub fn record_event(&mut self,
                         event_category: &str,
                         event_action: &str,
@@ -183,24 +183,25 @@ impl MetricsController {
         events.insert_event(event_category, event_action, event_label, event_value)
     }
 
-   /// Constructs a new event which is batched and sent to the Google Analytics
-   /// server.
+   /// Constructs and records an event with a floating point value. The recorded events are sent to the
+   /// server based on an internal schedule (when twenty events are recorded). Currently, this schedule
+   /// is not configurable.
    ///
    /// Params:
    ///
-  /// *event_category* -- Category of the event. For example, &apos;eng&apos; or &apos;user&apos;
+  /// **event_category** - Category of the event. For example, `eng` or `user`
   ///
-  /// *event_action* -- Action that the user took or what happened to trigger. For example, &apos;open-app&apos;
+  /// **event_action** - Action that triggered the event. For example, `open-app`
   ///
-  /// *event_label* -- Description of what the metric is. For example, &apos;memory&apos;
+  /// **event_label** - Label, or description, of the metric. For example, `memory`
   ///
-  /// *event_value* -- Numeric value of the metric, which is a floating point
+  /// **event_value** - Numeric (floating point) value of the metric.
   ///
   /// Returns:
   ///
-  /// *true* - Success
+  /// **true** - Success
   ///
-  /// *false* - Error, unable to record the event
+  /// **false** - Unable to record the event
   pub fn record_floating_point_event(&mut self,
                                      event_category: &str,
                                      event_action: &str,
